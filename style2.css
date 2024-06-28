@@ -1,0 +1,132 @@
+/* General Styles */
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;;
+
+    
+}
+.header{
+    background-color: #377DED;
+    padding: 20px 10px;
+    align-items: center;
+    margin: auto;
+    display: flex;
+    justify-content: space-around;
+
+}
+.h1{
+    position: relative;
+    left:-60;
+    align-items: start;
+    color: #ffffff;
+
+}
+/* body {
+    font-family: Arial, sans-serif;
+    background-color:white;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+} */
+
+nav ul li{
+    align-items: center;
+
+    display: inline-block;
+    list-style: none;
+    margin: 10px 15px; 
+}
+ a{
+    position: relative;
+    text-decoration: none;
+    color: #e3e3e3;
+    font-weight: 4000;
+    font-family: 'poppins',sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.5;
+
+}
+ a:after{
+    content: "";
+    position: absolute;
+    background-color: rgb(255, 255, 255);
+    height: 3px;
+    width: 0;
+    left:  0;
+    bottom: -10px;
+    transition: 0.3s;
+
+    
+}
+a:hover{
+    color: #ffffff;
+}
+a:hover:after{
+    width: 100%;
+}
+.Image img{
+    position: absolute;
+    left: 10px;
+    width:540px;
+    height:500px;
+}
+.e1 img{
+    position: absolute;
+    left:-55px;
+    top:469px;
+}
+.e2 img{
+    position: absolute;
+    left:82px;
+    top:576px;
+}
+
+.container {
+    text-align: right;
+  }
+  
+  label {
+    display: inline-block;
+    width: 150px;
+    text-align: right;
+    margin-right: 10px;
+  }
+  
+  input[type="text"], input[type="file"] {
+    width: 200px;
+    height: 30px;
+    margin-right: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+  }
+  
+  input[type="file"] {
+    padding: 10px 0;
+  }
+  
+  .registerbtn {
+    width: 100px;
+    height: 40px;
+    margin-right: 10px;
+    padding: 10px 10px;
+    border: none;
+    border-radius: 6px;
+    background-color: #337aec;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  .registerbtn:hover {
+    background-color: #337aec ;
+  }
+  
+.footer {
+    color:rgb(4, 4, 97);
+    text-align: center;
+    padding: 10px 0;
+    margin-top: 150px;
+  }
