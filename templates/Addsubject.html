@@ -8,13 +8,12 @@
 <div class="header">
     <h1 class="h1">Face Recognition</h1>
        <nav>
-           <ul><h8>
-           <li><a href="/Home">Home</a></li>
-           <li><a href="/Addstudent">Add Students</a></li>
-           <li><a href="">Add Subject</a></li>
-           <li><a href="/Attendancelog">Attendance log</a></li>
-           </h8>
-           </ul>
+         <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
+            <li><a href="{{ url_for('Addsubject') }}">Add Subject</a></li>
+            <li><a href="{{ url_for('Attendancelog') }}">Attendance log</a></li>
+        </ul>
        </nav>
 </div> 
 <div class="Selectsub">

@@ -1,0 +1,25 @@
+<!-- templates/video_feed.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Video Feed</title>
+    <style>
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f3f3f3;
+        }
+        .video-frame {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <img src="{{ url_for('video_feed') }}" class="video-frame">
+    </div>
+</body>
+</html>

@@ -8,13 +8,12 @@
 <div class="header">
    <h1 class="h1">Face Recognition</h1>
       <nav>
-          <ul><h8>
-          <li><a href = " ">Home</a></li>
-          <li><a href="/Addstudent">Add Students</a></li>
-          <li><a href="/Addsubject">Add Subject</a></li>
-          <li><a href="/Attendancelog">Attendance log</a></li>
-          </h8>
-          </ul>
+        <ul>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
+          <li><a href="{{ url_for('Addsubject') }}">Add Subject</a></li>
+          <li><a href="{{ url_for('Attendancelog') }}">Attendance log</a></li>
+      </ul>
       </nav>
 </div>  
 <div class="Image">
@@ -29,6 +28,8 @@
 </body>
 <div class="content">
   <h2 class="h2">CLICK HERE TO<br>GIVE ATTENDANCE...</h2>
+  <a href="{{ url_for('video_feed_page') }}">
   <button type="submit" class="cam">OPEN CAMERA</button>
+  </a>
 </div>
 {%endblock%}
