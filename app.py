@@ -7,13 +7,13 @@ import face_recognition
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'c:/AI project/clone/AL-ML/uploads1'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads1')  # Used os.getcwd() to get the current working directory
 app.secret_key = 'supersecretkey'  # Needed for flash messages
 
-BASE_DIR = 'c:/AI project/clone/AL-ML/'
+BASE_DIR = os.getcwd()
 
 # Ensure the upload folder exists
-upload_folder_path = os.path.join(BASE_DIR, app.config['UPLOAD_FOLDER'])
+upload_folder_path = app.config['UPLOAD_FOLDER']
 if not os.path.exists(upload_folder_path):
     os.makedirs(upload_folder_path)
 
@@ -31,13 +31,36 @@ def load_students():
 
 def save_students(students):
     students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    with open(students_file_path, 'w') as f:
-        json.dump(students, f)
+    try:
+        with open(students_file_path, 'w') as f:
+            json.dump(students, f, indent=4)  # Added indent for better readability
+    except Exception as e:
+        print(f"Error saving students file: {e}")
+        flash(f'Error saving student data: {e}', 'error')
 
 students = load_students()
 
-# Attendance log
-attendance_log = {}
+# Load attendance log
+def load_attendance_log():
+    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
+    if not os.path.exists(attendance_log_path):
+        return {}
+    with open(attendance_log_path, 'r') as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"Error loading attendance log: {e}")
+            return {}
+
+def save_attendance_log(attendance_log):
+    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
+    try:
+        with open(attendance_log_path, 'w') as f:
+            json.dump(attendance_log, f, indent=4)
+    except Exception as e:
+        print(f"Error saving attendance log file: {e}")
+
+attendance_log = load_attendance_log()
 
 # Load reference encodings
 reference_encodings = {}
@@ -97,13 +120,14 @@ def generate_frames():
 
     video_capture.release()
 
-def Persent(student_name):
+def mark_attendance(student_name):
     date_str = datetime.now().strftime("%Y-%m-%d")
     time_str = datetime.now().strftime("%H:%M:%S")
     if date_str not in attendance_log:
         attendance_log[date_str] = {}
     if student_name not in attendance_log[date_str]:
         attendance_log[date_str][student_name] = time_str
+        save_attendance_log(attendance_log)
 
 @app.route('/')
 @app.route('/Home')
@@ -115,25 +139,47 @@ def Addstudent():
     if request.method == 'POST':
         student_id = request.form['studentid']
         student_name = request.form['studentname']
+
+        # Ensure the student ID and name are provided
+        if not student_id or not student_name:
+            flash('Student ID and Name are required', 'error')
+            return redirect(request.url)
+
         if 'studentphoto' not in request.files:
             flash('No file part', 'error')
             return redirect(request.url)
+        
         file = request.files['studentphoto']
         if file.filename == '':
             flash('No selected file', 'error')
             return redirect(request.url)
+        
         if file:
-            filename = f"{student_id}.jpg"
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            students[student_id] = {'name': student_name, 'image': filename}
-            save_students(students)
+            try:
+                filename = f"{student_id}.jpg"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
 
-            # Update reference encodings
-            image = face_recognition.load_image_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            encoding = face_recognition.face_encodings(image)[0]
-            reference_encodings[student_id] = encoding
+                # Confirm file is saved
+                if not os.path.exists(file_path):
+                    flash('File was not saved correctly', 'error')
+                    return redirect(request.url)
 
+                # Save student data
+                students[student_id] = {'name': student_name, 'image': filename}
+                save_students(students)
+                
+                # Update reference encodings
+                image = face_recognition.load_image_file(file_path)
+                encoding = face_recognition.face_encodings(image)[0]
+                reference_encodings[student_id] = encoding
+
+                flash('Student added successfully!', 'success')
+            except Exception as e:
+                flash(f'Error adding student: {e}', 'error')
+                print(f"Error: {e}")
             return redirect(url_for('home'))
+    
     return render_template('Addstudent.html')
 
 @app.route('/Addsubject')
@@ -163,8 +209,7 @@ def mark_attendance_ajax():
             del attendance_log[date][student_name]
 
     # Save attendance log
-    with open(os.path.join(BASE_DIR, 'attendance_log.json'), 'w') as f:
-        json.dump(attendance_log, f)
+    save_attendance_log(attendance_log)
 
     return jsonify({'message': f'Attendance for {student_name} on {date} marked as {status}'}), 200
 
@@ -206,9 +251,6 @@ def view_attendance():
     return render_template('view_attendance.html', dates=dates, 
                            attendance_status=attendance_status, selected_date=selected_date, 
                            total_attendance_count=total_attendance_count, students=students)
-
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)
