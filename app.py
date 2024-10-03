@@ -1,14 +1,17 @@
 from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify
+from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
 import os
 import json
 import face_recognition
 from datetime import datetime
+from imgaug import augmenters as iaa
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads1')  # Used os.getcwd() to get the current working directory
 app.secret_key = 'supersecretkey'  # Needed for flash messages
+socketio = SocketIO(app)  # Initialize Flask-SocketIO
 
 BASE_DIR = os.getcwd()
 
@@ -29,6 +32,17 @@ def load_students():
             print(f"Error loading JSON: {e}")
             return {}
 
+def augment_image(image):
+    seq = iaa.Sequential([
+        iaa.Fliplr(0.5),  # horizontal flips
+        iaa.Affine(rotate=(-30, 30)),  # rotate images
+        iaa.AdditiveGaussianNoise(scale=(0, 0.05*255))  # add gaussian noise
+    ])
+    return seq.augment_image(image)
+def preprocess_image(image_path):
+    image = face_recognition.load_image_file(image_path)
+    # Resize image or perform other preprocessing...
+    return image
 def save_students(students):
     students_file_path = os.path.join(BASE_DIR, 'students1.json')
     try:
@@ -68,13 +82,23 @@ for student_id, student_data in students.items():
     image_path = os.path.join(app.config['UPLOAD_FOLDER'], student_data['image'])
     if os.path.exists(image_path):
         image = face_recognition.load_image_file(image_path)
-        encoding = face_recognition.face_encodings(image)[0]
-        reference_encodings[student_id] = encoding
+        encodings = face_recognition.face_encodings(image)
+        
+        if encodings:  # Check if encodings is not empty
+            reference_encodings[student_id] = encodings[0]
+        else:
+            print(f"No face found in image for student {student_data['name']} at {image_path}")
     else:
         print(f"Image for student {student_data['name']} not found at {image_path}")
+        
+
+recent_recognitions = {}
 
 def generate_frames():
-    video_capture = cv2.VideoCapture(0)  # Try changing the index if you have multiple webcams
+    video_capture = cv2.VideoCapture(0)  # Use 0 for the default camera
+    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
     if not video_capture.isOpened():
         print("Error: Could not open video capture device.")
         return
@@ -108,9 +132,11 @@ def generate_frames():
 
         # Display the result
         if recognized_student:
-            cv2.putText(frame, f"Match: {recognized_student}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            cv2.putText(frame, f"Match: {recognized_student}", (50, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
         else:
-            cv2.putText(frame, "No Match", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+            cv2.putText(frame, "No Match", (50, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
@@ -120,11 +146,14 @@ def generate_frames():
 
     video_capture.release()
 
+
+
 def mark_attendance(student_name):
     date_str = datetime.now().strftime("%Y-%m-%d")
     time_str = datetime.now().strftime("%H:%M:%S")
     if date_str not in attendance_log:
         attendance_log[date_str] = {}
+    # Check if the student is already present today
     if student_name not in attendance_log[date_str]:
         attendance_log[date_str][student_name] = time_str
         save_attendance_log(attendance_log)
@@ -148,12 +177,12 @@ def Addstudent():
         if 'studentphoto' not in request.files:
             flash('No file part', 'error')
             return redirect(request.url)
-        
+
         file = request.files['studentphoto']
         if file.filename == '':
             flash('No selected file', 'error')
             return redirect(request.url)
-        
+
         if file:
             try:
                 filename = f"{student_id}.jpg"
@@ -175,11 +204,12 @@ def Addstudent():
                 reference_encodings[student_id] = encoding
 
                 flash('Student added successfully!', 'success')
+                return redirect(url_for('home'))  # Ensure to redirect after successful add
             except Exception as e:
                 flash(f'Error adding student: {e}', 'error')
                 print(f"Error: {e}")
-            return redirect(url_for('home'))
-    
+
+    # If GET request or no action taken, return the Addstudent page
     return render_template('Addstudent.html')
 
 @app.route('/Addsubject')
@@ -253,4 +283,4 @@ def view_attendance():
                            total_attendance_count=total_attendance_count, students=students)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)

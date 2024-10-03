@@ -31,10 +31,6 @@
         "name": "Atreyee Phukan",
         "image": "220710007016.jpg"
     },
-    "ARUNABH BHARDWAJ": {
-        "name": "220710007013",
-        "image": "ARUNABH BHARDWAJ.jpg"
-    },
     "220710007020": {
         "name": "BISHAL RANJAN NATH",
         "image": "220710007020.jpg"
@@ -79,10 +75,6 @@
         "name": "Sampriti Kalita",
         "image": "220710007051.jpg"
     },
-    "220710007037": {
-        "name": "Nabadeep Dutta",
-        "image": "220710007037.jpg"
-    },
     "220710307068": {
         "name": "Rezaur Rahman",
         "image": "220710307068.jpg"
@@ -110,6 +102,9 @@
     "230750007005": {
         "name": "Subasana Saikia",
         "image": "230750007005.jpg"
+    },
+    "220710007037": {
+        "name": "nabadeep dutta",
+        "image": "220710007037.jpg"
     }
-    
 }
