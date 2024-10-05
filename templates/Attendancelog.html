@@ -40,8 +40,9 @@
             <button type="button">View Latest Attendance</button>
         </a>
     </div>
-    <div class="k">
-        <table class="box">
+    <div class="outer-wrapper">
+        <div class="inner-wrapper">
+            <table>
             <thead>
                 <tr>
                     <th>Roll No</th>
@@ -72,10 +73,10 @@
         </table>
     </div>
     <div class="e1">
-        <img src="static/assets/image/e1.png">
+        <img src="{{ url_for('static', filename='assets/image/e1.png') }}">
     </div>
     <div class="e2">
-        <img src="static/assets/image/e2.png">
+        <img src="{{ url_for('static', filename='assets/image/e2.png') }}">
     </div>
     <div class="egroup">
         <img src="static/assets/image/twin spheres.png">
