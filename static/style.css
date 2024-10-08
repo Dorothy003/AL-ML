@@ -23,13 +23,13 @@
     color: #ffffff;
 
 }
-.k{
+/*.outer-wrapper{
     display: flex;
     justify-content: center;
     align-items: center;
     height: 60vh; 
     font-family: 'Poppins', sans-serif;
-}
+}*/
 /* body {
     font-family: Arial, sans-serif;
     background-color:white;
@@ -73,14 +73,37 @@ a:hover:after{
     width: 100%;
 }
 
+.e1 .e2{
+  position:relative;
+  bottom:auto;
+  left:0;
+}
+
 .e1 img{
-  position: absolute;
-  top:392px;
+  position:absolute;
+  bottom: 0;
+  left: 0;
+  display: inline-block; 
+  margin-right: 10px;
 }
 .e2 img{
   position: absolute;
-  top : 534px;
-  left: 120px;
+  bottom: 0;
+  left: 0;
+  display: inline-block; 
+  margin-right: 30px;
+}
+.egroup {
+  position: absolute;
+  top: 50px;
+  right: 0;
+
+}
+
+.egroup img{
+  display: inline-block; 
+  position: relative;
+  margin-right: 0px;
 }
 
 /*Home page*/
@@ -238,50 +261,54 @@ a:hover:after{
     color: #2E2D57;
     
 }
-.egroup img{
-  position: absolute;
-  top : 51px;
-  right: 0px;
-}
+
 /*Attendancelog*/
 
-.box{
-  text-align: right;
-  border-collapse: collapse;
-  width: 40%; 
-  max-width: 600px; 
-  margin-left: auto;
-  margin-right: auto;
+.inner-wrapper{
+ min-width:fit-content;
+ max-height: 270px;
+ margin:12px;
+ overflow-y:scroll;
+}
+.outer-wrapper{
+ border:2px solid #2E2D57;
+ box-shadow: 0px 0px 3px black;
+ margin:60px auto;
+ border-radius: 5px;
+ max-width: fit-content;
+ 
 }
 
 
 
 table{
-  width:200px;
+  min-width: fit-content;
+  border-collapse: separate;
+  border-spacing:0px;
+  border: 1px solid black;
   }
   
-  th{
-    text-align: center;
+th{
+  position:sticky;
+  top:0px;
+  background-color:#383682;
+  color:white;
   }
-
-  table, th, td{
+  
+ th, td{
       border:2px solid #2E2D57;
-      border-collapse: collapse;
-      text-align: center;
+      padding: 5px;
+      text-align:left;
     }
 
-th, td{
-  padding: 2px;
-}
-
-tr:nth-child(odd){
-  background-color:#4F5589;
+/*tr:nth-child(odd){
+  background-color:rgb(182, 199, 248);
 }
 
 tr:nth-child(even){
   background-color: #ffffff;
 }
-
+*/
 
 .container {
     border-collapse: collapse;
@@ -303,7 +330,7 @@ tr:nth-child(even){
   cursor: pointer;
 }
 
-.btn2{
+.button{
   font-size: 12px;
   color: white;
   background: rgb(159, 13, 13);
