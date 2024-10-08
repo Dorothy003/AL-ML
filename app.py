@@ -127,7 +127,10 @@ def generate_frames():
             if matches[best_match_index]:
                 student_id = list(reference_encodings.keys())[best_match_index]
                 recognized_student = students[student_id]['name']
-                mark_attendance(recognized_student)
+                date = datetime.now().strftime("%Y-%m-%d")
+                attendance_log.setdefault(date, {})[recognized_student] = 'Present'
+                save_attendance_log(attendance_log)
+                #socketio.emit('mark_attendance_ajax',{'student_id':student_id, 'date': date, 'status': 'Present'})
                 break
 
         # Display the result
@@ -148,15 +151,15 @@ def generate_frames():
 
 
 
-def mark_attendance(student_name):
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    time_str = datetime.now().strftime("%H:%M:%S")
-    if date_str not in attendance_log:
-        attendance_log[date_str] = {}
-    # Check if the student is already present today
-    if student_name not in attendance_log[date_str]:
-        attendance_log[date_str][student_name] = time_str
-        save_attendance_log(attendance_log)
+#def mark_attendance(student_name):
+   # date_str = datetime.now().strftime("%Y-%m-%d")
+   # time_str = datetime.now().strftime("%H:%M:%S")
+    #if date_str not in attendance_log:
+    # attendance_log[date_str] = {}
+     #Check if the student is already present today
+   # if student_name not in attendance_log[date_str]:
+        #attendance_log[date_str][student_name] = time_str     
+     #   save_attendance_log(attendance_log)
 
 @app.route('/')
 @app.route('/Home')
@@ -254,9 +257,14 @@ def video_feed_page():
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
+def load_json_data():
+    with open('students1.json', 'r') as students_file, open('attendance_log.json', 'r') as attendance_file:
+        students = json.load(students_file)
+        attendance_log = json.load(attendance_file)
+    return students, attendance_log
 @app.route('/view_attendance', methods=['GET', 'POST'])
 def view_attendance():
+    students, attendance_log = load_json_data()
     selected_date = None
     attendance_status = {}
     total_attendance_count = {student_data['name']: 0 for student_data in students.values()}
@@ -264,14 +272,15 @@ def view_attendance():
     if request.method == 'POST':
         selected_date = request.form.get('selected_date')
         if selected_date:
-            if selected_date in attendance_log:
+           if selected_date in attendance_log:
                 attendance_status = attendance_log[selected_date]
-            else:
-                flash(f'No attendance record found for {selected_date}.', 'error')
+        else:
+            flash(f'No attendance record found for {selected_date}.', 'error')
 
     # Calculate total attendance
     for date, daily_log in attendance_log.items():
         for student_name in daily_log.keys():
+           
             total_attendance_count[student_name] += 1
 
     # Include today's date
@@ -280,7 +289,13 @@ def view_attendance():
 
     return render_template('view_attendance.html', dates=dates, 
                            attendance_status=attendance_status, selected_date=selected_date, 
-                           total_attendance_count=total_attendance_count, students=students)
-
+ 
+                          total_attendance_count=total_attendance_count, students=students)
+def clean_attendance_log():
+    for date, daily_log in attendance_log.items():
+        for student_name in daily_log:
+            attendance_log[date][student_name] = 'Present'
+    save_attendance_log(attendance_log)
+clean_attendance_log()
 if __name__ == "__main__":
     socketio.run(app, debug=True)
