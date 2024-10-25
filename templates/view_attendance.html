@@ -73,15 +73,19 @@
                         <tr>
                             <td>{{ student_data.name }}</td>
                             <td>
-                                {% if selected_date in attendance_status %}
+                               {% if selected_date in attendance_status %} 
+                                  
                                     {% if student_data.name in attendance_status[selected_date] %}
-                                        {{ attendance_status[selected_date][student_data.name] }}
+                                       Present
+                                       
+                                      <!--  {{ attendance_status[student_data.name] }} -->
                                     {% else %}
                                         Absent
                                     {% endif %}
-                                {% else %}
-                                    Absent
-                                {% endif %}
+                                    {% else %}
+                                       Absent
+                                {% endif %} 
+
                             </td>
                         </tr>
                     {% endfor %}
