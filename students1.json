@@ -1,6 +1,6 @@
 {
     "220710007001": {
-        "name": "Abhilash Kashyap",
+        "name": "Abhilash kashyap",
         "image": "220710007001.jpg"
     },
     "220710007003": {
@@ -15,13 +15,25 @@
         "name": "Abhishek Saikia",
         "image": "220710007005.jpg"
     },
+    "220710007006": {
+        "name": "Agniraj Kashyap Dutta",
+        "image": "220710007006.jpg"
+    },
     "220710007009": {
-        "name": "Akash Sarmah",
+        "name": "Akash Sharma",
         "image": "220710007009.jpg"
     },
     "220710007010": {
         "name": "Akhrang Boro",
         "image": "220710007010.jpg"
+    },
+    "220710007013": {
+        "name": "Arunabh Bhardwaj",
+        "image": "220710007013.jpg"
+    },
+    "220710007014": {
+        "name": "Ashish Saikia",
+        "image": "220710007014.jpg"
     },
     "220710007015": {
         "name": "Ashrita Lahon",
@@ -32,79 +44,11 @@
         "image": "220710007016.jpg"
     },
     "220710007020": {
-        "name": "BISHAL RANJAN NATH",
+        "name": "Bishal Ranjan Nath",
         "image": "220710007020.jpg"
     },
-    "220710007029": {
-        "name": "Ishani Gogoi",
-        "image": "220710007029.jpg"
-    },
-    "22071007033": {
-        "name": "Manash Khatowal",
-        "image": "22071007033.jpg"
-    },
-    "220710007047": {
-        "name": "Rakib Hussain",
-        "image": "220710007047.jpg"
-    },
-    "220710007035": {
-        "name": "Mousam Deka\t",
-        "image": "220710007035.jpg"
-    },
-    "220710007042": {
-        "name": "Nitul Das",
-        "image": "220710007042.jpg"
-    },
-    "220710007039": {
-        "name": "Niharanjan Gohain \t",
-        "image": "220710007039.jpg"
-    },
-    "220710007036": {
-        "name": "Mughaka Sema",
-        "image": "220710007036.jpg"
-    },
-    "220710007040": {
-        "name": "Nirupam Chakraborty ",
-        "image": "220710007040.jpg"
-    },
-    "220710007027": {
-        "name": "Iffat Ahad Jahan",
-        "image": "220710007027.jpg"
-    },
-    "220710007051": {
-        "name": "Sampriti Kalita",
-        "image": "220710007051.jpg"
-    },
-    "220710307068": {
-        "name": "Rezaur Rahman",
-        "image": "220710307068.jpg"
-    },
-    "220710007058": {
-        "name": "Syed Tasdeeque Ruhani",
-        "image": "220710007058.jpg"
-    },
-    "230750007001": {
-        "name": "Anurag Rajbonshi",
-        "image": "230750007001.jpg"
-    },
-    "220710007062": {
-        "name": "Yubaraj Gogoi",
-        "image": "220710007062.jpg"
-    },
-    "220710007053": {
-        "name": "Sarmen Terang",
-        "image": "220710007053.jpg"
-    },
     "220710007023": {
-        "name": "Debraj Dutta ",
+        "name": "Debraj Saikia",
         "image": "220710007023.jpg"
-    },
-    "230750007005": {
-        "name": "Subasana Saikia",
-        "image": "230750007005.jpg"
-    },
-    "220710007037": {
-        "name": "nabadeep dutta",
-        "image": "220710007037.jpg"
     }
 }
