@@ -144,13 +144,16 @@ font-family: "Inter", sans-serif;
 .cam:hover{
 background-color: #02005f ;
 }
+
 .h2{
 text-align: start;
 font-size: 3rem;
 left:14;
 align-items: start;
 color:#2E2D57;
-font-family: "Inter", sans-serif;
+font-family: 'Roboto Slab', serif;
+font-weight: 2000;
+
 }
 
 /*ADD STUDENT*/
