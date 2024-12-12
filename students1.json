@@ -75,10 +75,6 @@
         "name": "Mughaka Sema",
         "image": "220710007036.jpg"
     },
-    "220710007037": {
-        "name": "Nabadeep dutta",
-        "image": "220710007037.jpg"
-    },
     "220710007039": {
         "name": "Niharanjan Gohai",
         "image": "220710007039.jpg"
@@ -122,5 +118,9 @@
     "230750007005": {
         "name": "Subasana Saikia",
         "image": "230750007005.jpg"
+    },
+    "220710007037": {
+        "name": "Nabadeep Dutta",
+        "image": "220710007037.jpg"
     }
 }

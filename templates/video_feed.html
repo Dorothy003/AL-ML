@@ -2,30 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Video Feed</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+    <title>Video Feed with Full-Screen Loader</title>
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color:#2E2D57;
+        
+        :root {
+            --background: #2E2D57;
+            --loader: #5b56d2;
+            --load-new: #9c27b0;
         }
-        .video-container {
+
+        body,
+        html {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            background: var(--background);
             display: flex;
             justify-content: center;
             align-items: center;
+        }
+
+        .loader-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
             height: 100vh;
-            background-color: #2E2D57;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+            z-index: 2; /* Ensure loader is on top of everything */
+        }
+
+        /* Loader animation style */
+        .loader {
+            position: relative;
+            width: 1em;
+            height: 4em;
+            background-color: currentColor;
+            color: var(--loader);
+            animation: load 1s infinite ease-in-out;
+            transform: translateZ(0);
+        }
+
+        .loader:before,
+        .loader:after {
+            position: absolute;
+            top: 0;
+            content: '';
+            width: 1em;
+            height: 4em;
+            background-color: currentColor;
+            color: var(--loader);
+            animation: load 1s infinite ease-in-out;
+        }
+
+        .loader:before {
+            left: -1.5em;
+        }
+
+        .loader:after {
+            right: -1.5em;
+            animation-delay: 0.32s;
+        }
+
+        /* Keyframes for the loader animation */
+        @keyframes load {
+            0%, 80%, 100% {
+                height: 4em;
+                box-shadow: 0 0;
+            }
+            40% {
+                height: 5em;
+                box-shadow: 0 -1em;
+                color: var(--load-new);
+            }
+        }
+
+ 
+        .video-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--background); /* Match the background color */
             padding: 20px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
-        }
-        .video-frame {
-            border: 5px solid #007bff; /* Blue border for the video frame */
-            border-radius: 100px; /* Rounded corners */
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
-            width: 50%; /* Adjust the width as needed */
+            z-index: 1; /* Video container below loader */
+            width: 50%; /* Fixed size for the video container */
             height: auto; /* Maintain aspect ratio */
         }
+
+        .video-frame {
+            border: 5px solid var(--background); /* Match the border color with the background */
+            border-radius: 100px; /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
+            width: 100%; /* Full width of the container */
+            height: auto; /* Maintain aspect ratio */
+        }
+
         /* Responsive design for smaller screens */
         @media (max-width: 768px) {
             .video-frame {
@@ -35,8 +115,56 @@
     </style>
 </head>
 <body>
-    <div class="video-container">
-        <img src="{{ url_for('video_feed') }}" class="video-frame">
+
+ 
+    <div class="loader-container">
+        <div class="loader"></div>
     </div>
+
+ 
+    <div class="video-container">
+        <img src="{{ url_for('video_feed') }}" class="video-frame" onload="hideLoadingScreen()">
+    </div>
+
+    <script>
+      
+        function hideLoadingScreen() {
+            console.log("Video Loaded: Hiding loading screen");
+            document.querySelector('.loader-container').style.display = 'none'; 
+        }
+       
+
+        
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var confirmedStudents = new Set();  // Set to track students who have been confirmed
+
+        // Function to show a confirmation dialog
+        function showConfirmationDialog(studentName) {
+            // Only show the dialog if the student hasn't already been confirmed
+            if (confirmedStudents.has(studentName)) {
+                return;
+            }
+
+            const confirmed = confirm('Do you want to mark ' + studentName + ' as present?');
+
+            // Emit the response (Yes/No) to the server
+            if (confirmed) {
+                socket.emit('mark_as_present', {'name': studentName});
+            } else {
+                socket.emit('mark_as_absent', {'name': studentName});
+            }
+
+            // Mark this student as confirmed so that the dialog won't show again
+            confirmedStudents.add(studentName);
+        }
+
+        // Listen for recognized student name (from Flask)
+        socket.on('recognized_student', function(data) {
+            if (data && data.name) {
+                showConfirmationDialog(data.name);  // Show the confirmation dialog
+            }
+        });
+    </script>
+
 </body>
 </html>

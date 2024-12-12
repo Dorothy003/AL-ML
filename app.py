@@ -94,6 +94,28 @@ for student_id, student_data in students.items():
 
 recent_recognitions = {}
 
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+
+@socketio.on('mark_as_present')
+def handle_mark_present(data):
+    student_name = data.get('name')
+    if student_name:
+        date = datetime.now().strftime("%Y-%m-%d")
+        attendance_log.setdefault(date, {})[student_name] = 'Present'
+        save_attendance_log(attendance_log)
+        print(f"{student_name} marked as present")
+
+@socketio.on('mark_as_absent')
+def handle_mark_absent(data):
+    student_name = data.get('name')
+    if student_name:
+        date = datetime.now().strftime("%Y-%m-%d")
+        attendance_log.setdefault(date, {})[student_name] = 'Absent'
+        save_attendance_log(attendance_log)
+        print(f"{student_name} marked as absent")
+
 def generate_frames():
     video_capture = cv2.VideoCapture(0)  # Use 0 for the default camera
     video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -127,10 +149,10 @@ def generate_frames():
             if matches[best_match_index]:
                 student_id = list(reference_encodings.keys())[best_match_index]
                 recognized_student = students[student_id]['name']
-                date = datetime.now().strftime("%Y-%m-%d")
-                attendance_log.setdefault(date, {})[recognized_student] = 'Present'
-                save_attendance_log(attendance_log)
-                #socketio.emit('mark_attendance_ajax',{'student_id':student_id, 'date': date, 'status': 'Present'})
+                
+                # Emit recognized student name to the frontend for confirmation
+                socketio.emit('recognized_student', {'name': recognized_student})
+
                 break
 
         # Display the result
@@ -140,7 +162,7 @@ def generate_frames():
         else:
             cv2.putText(frame, "No Match", (50, 50), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-
+ 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
 
@@ -148,18 +170,6 @@ def generate_frames():
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
     video_capture.release()
-
-
-
-#def mark_attendance(student_name):
-   # date_str = datetime.now().strftime("%Y-%m-%d")
-   # time_str = datetime.now().strftime("%H:%M:%S")
-    #if date_str not in attendance_log:
-    # attendance_log[date_str] = {}
-     #Check if the student is already present today
-   # if student_name not in attendance_log[date_str]:
-        #attendance_log[date_str][student_name] = time_str     
-     #   save_attendance_log(attendance_log)
 
 @app.route('/')
 @app.route('/Home')
@@ -233,22 +243,23 @@ def mark_attendance_ajax():
 
     if date not in attendance_log:
         attendance_log[date] = {}
-    
+
     student_name = students[student_id]['name']
+
+    # Update attendance log based on status
     if status == 'Present':
         attendance_log[date][student_name] = 'Present'
-    else:
-        if student_name in attendance_log[date]:
-            del attendance_log[date][student_name]
+    elif status == 'Absent':
+        attendance_log[date].pop(student_name, None)  # Remove if exists
 
-    # Save attendance log
+    # Save the updated attendance log
     save_attendance_log(attendance_log)
 
     return jsonify({'message': f'Attendance for {student_name} on {date} marked as {status}'}), 200
 
-@app.route('/subject_video_feed/<subject>')
-def subject_video_feed(subject):
-    return Response(generate_frames_for_subject(subject), mimetype='multipart/x-mixed-replace; boundary=frame')
+# @app.route('/subject_video_feed/<subject>')
+# def subject_video_feed(subject):
+#     return Response(generate_frames_for_subject(subject), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/video_feed_page')
 def video_feed_page():

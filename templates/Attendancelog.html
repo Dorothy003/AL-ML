@@ -47,7 +47,6 @@
                 <tr>
                     <th>Roll No</th>
                     <th>Student Name</th>
-                    <th>Present/Absent</th>
                     <th>attendance</th>
                     {% for date in dates %}
                         <th>{{ date }}</th>
@@ -56,19 +55,18 @@
                 </tr>
             </thead>
             <tbody>
-                {% for student_id, student_data in students.items() %}
-                    <tr>
-                        <td>{{ student_data['name'] }}</td>
-                        <td>{{ student_id }}</td>
-                        <td>
-                            <button onclick="markAttendance('{{ student_id }}', '{{ date }}', 'Present')">Present</button>
-                            <button onclick="markAttendance('{{ student_id }}', '{{ date }}', 'Absent')">Absent</button>
-                        </td>
-                        {% for date in dates %}
-                            <td>{{ attendance_log.get(date, {}).get(student_data['name'], 'Absent') }}</td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
+    {% for student_id, student_data in students.items() %}
+        <tr>
+            <td>{{ student_data['name'] }}</td>
+            <td>{{ student_id }}</td>
+           
+            {% for date in dates %}
+                <td>{{ attendance_log.get(date, {}).get(student_data['name'], 'Absent') }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+</tbody>
+
             </tbody>
         </table>
     </div>
