@@ -25,26 +25,44 @@
             border-collapse: collapse;
             margin-bottom: 20px;
             background-color: #fff;
+            border:#2E2D57;
         }
         table, th, td {
-            border: 1px solid #ddd;
+            border: 2px solid #2E2D57;
         }
         th, td {
             padding: 10px;
             text-align: left;
         }
         th {
-            background-color: #f2f2f2;
+            background-color:#2E2D57;
+            color:white;
         }
         .container {
             max-width: 800px;
             margin: auto;
         }
+        button[type="submit"] {
+        background-color: #4CAF50; 
+        color: white;
+        border: none; 
+        padding: 10px 13px; 
+        cursor: pointer; 
+        font-size: 16px; 
+        border-radius: 3px; 
+        transition: background-color 0.3s ease;
+    }
+
+    button[type="submit"]:hover {
+        background-color: #45a049; /* Darker green on hover */
+    }
+
+        
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>View Attendance</h1>
+        <h1>View Attendance📝</h1>
         
         <!-- Attendance Selection Form -->
         <form method="POST" action="{{ url_for('view_attendance') }}">

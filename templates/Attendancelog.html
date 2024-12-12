@@ -22,6 +22,30 @@
             });
         }
     </script>
+    <style>
+        .button-container {
+            text-align: center;
+             position: relative; 
+            top: 400px;
+             margin-bottom: 20px;
+            
+        }
+
+        button {
+            padding: 8px 14px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #2E2D57;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background-color 0.4s ease;
+        }
+
+        button:hover {
+            background-color:#090828;
+        }
+    </style>
 </head>
 <body>
     <div class="header">
@@ -35,7 +59,7 @@
             </ul>
         </nav>
     </div>
-    <div>
+    <div class = "button-container">
         <a href="{{ url_for('view_attendance', date='latest') }}">
             <button type="button">View Latest Attendance</button>
         </a>
