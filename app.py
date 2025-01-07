@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify,session
 from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
@@ -7,8 +7,18 @@ import json
 import face_recognition
 from datetime import datetime
 from imgaug import augmenters as iaa
+from flask_pymongo import PyMongo
+from werkzeug.security import generate_password_hash, check_password_hash
+import sys
+sys.dont_write_bytecode = True
 
 app = Flask(__name__)
+app.config["MONGO_URI"] = "mongodb://localhost:27017/Log-in"
+app.secret_key = os.urandom(24)
+mongo = PyMongo(app)
+
+
+
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads1')  # Used os.getcwd() to get the current working directory
 app.secret_key = 'supersecretkey'  # Needed for flash messages
 socketio = SocketIO(app)  # Initialize Flask-SocketIO
@@ -172,9 +182,14 @@ def generate_frames():
     video_capture.release()
 
 @app.route('/')
+def index():
+    if 'user' not in session:
+        return redirect(url_for('login')) 
+    return redirect(url_for('dashboard')) 
 @app.route('/Home')
 def home():
     return render_template('home.html')
+
 
 @app.route('/Addstudent', methods=['GET', 'POST'])
 def Addstudent():
@@ -224,6 +239,50 @@ def Addstudent():
 
     # If GET request or no action taken, return the Addstudent page
     return render_template('Addstudent.html')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        # Check if user exists in the database
+        user = mongo.db.users.find_one({'email': email})
+        
+        if user and check_password_hash(user['password'], password):
+            session['user'] = email
+       
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid Email or Password. Please try again.', 'error')
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        name= request.form['name']
+        password = request.form['password']
+        password_hash = generate_password_hash(password)  # Store hashed password
+        
+        # Check if user already exists
+        if mongo.db.users.find_one({'email': email}):
+            flash('Email already exists. Please choose a different email.', 'error')
+            return redirect(url_for('register'))
+        
+        # Insert new user into the database
+        mongo.db.users.insert_one({'name':name, 'email': email, 'password': password_hash})
+        flash('Registration Successful!', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+   
+    return redirect(url_for('login'))
 
 @app.route('/Addsubject')
 def Addsubject():
@@ -308,5 +367,29 @@ def clean_attendance_log():
             attendance_log[date][student_name] = 'Present'
     save_attendance_log(attendance_log)
 clean_attendance_log()
+
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user' not in session:
+        return redirect(url_for('login'))  
+    
+    
+    user_email = session['user']
+    user = mongo.db.users.find_one({'email': user_email})
+    
+    if user:
+        admin_name = user['name']
+    else:
+        admin_name = "Admin" 
+
+ 
+
+    return render_template('dashboard.html', 
+                           admin_name=admin_name,
+    )
+
+
 if __name__ == "__main__":
     socketio.run(app, debug=True)   

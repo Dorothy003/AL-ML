@@ -1,0 +1,1 @@
+MONGO_URI ="mongodb+srv://Nabadeep_78:<Nabadeep00>@cluster0.6nt45.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
