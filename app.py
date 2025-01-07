@@ -33,15 +33,7 @@ if not os.path.exists(upload_folder_path):
 
 # Load student data
 def load_students():
-    #students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    #if not os.path.exists(students_file_path):
-     #   return {}
-    #with open(students_file_path, 'r') as f:
-     #   try:
-      #      return json.load(f)
-       # except json.JSONDecodeError as e:
-        #    print(f"Error loading JSON: {e}")
-         #   return {}
+  
          students = {}
          for student in students_collection.find():
              students[str(student['_id'])] = {
@@ -61,14 +53,7 @@ def preprocess_image(image_path):
     image = face_recognition.load_image_file(image_path)
     # Resize image or perform other preprocessing...
     return image
-#def save_students(students):
- #   students_file_path = os.path.join(BASE_DIR, 'students1.json')
-  #  try:
-   #     with open(students_file_path, 'w') as f:
-    #        json.dump(students, f, indent=4)  # Added indent for better readability
-    #except Exception as e:
-     #   print(f"Error saving students file: {e}")
-      #  flash(f'Error saving student data: {e}', 'error')
+
 
 #students = load_students()
 def save_students(student_id, student_data):
@@ -79,24 +64,7 @@ def save_students(student_id, student_data):
         upsert = True
     )
 
-# Load attendance log
-#def load_attendance_log():
-   # attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-    #if not os.path.exists(attendance_log_path):
-     #   return {}
-    #with open(attendance_log_path, 'r') as f:
-     #   try:
-      #      return json.load(f)
-       # except json.JSONDecodeError as e:
-        #    print(f"Error loading attendance log: {e}")
-         #   return {}
-    #attendance_log = {}
-    #for record in attendance_collection.find():
-        #     date = record['date']
-       #      if date not in attendance_log_collection:
-      #           attendance_log_collection[date] = {}
-     #        attendance_log_collection[date][record['student_name']] = record['status']
-    #return attendance_log_collection  
+
 def load_attendance_log():
     # Assuming you want to load the attendance log from MongoDB
     attendance_log_collection = db.attendance_log_collection
@@ -113,13 +81,6 @@ def load_attendance_log():
 
                                             
 
-#def save_attendance_log(attendance_log):
- #   attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-  #  try:
-   #     with open(attendance_log_path, 'w') as f:
-     #       json.dump(attendance_log, f, indent=4)
-    #except Exception as e:
-      #  print(f"Error saving attendance log file: {e}")
 
 attendance_log = load_attendance_log()
 def save_attendance_log(date, student_name, status):
@@ -158,8 +119,7 @@ def handle_mark_present(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-       # attendance_log.setdefault(date, {})[student_name] = 'Present'
-        #save_attendance_log(attendance_log)
+   
         save_attendance_log(date, student_name, 'Present')
         print(f"{student_name} marked as present")
 
@@ -314,9 +274,7 @@ def mark_attendance_ajax():
 
     return jsonify({'message': f'Attendance for {student_name} on {date} marked as {status}'}), 200
 
-# @app.route('/subject_video_feed/<subject>')
-# def subject_video_feed(subject):
-#     return Response(generate_frames_for_subject(subject), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/video_feed_page')
 def video_feed_page():
@@ -359,19 +317,7 @@ def view_attendance():
                            attendance_status=attendance_status, selected_date=selected_date, 
  
                           total_attendance_count=total_attendance_count, students=students)
-#def clean_attendance_log():
-   # for date, daily_log in attendance_log.items():
-  # for record in attendance_log.find():  # Iterate through each document in the collection
-    #for record in attendance_log.find():
-        #print(record)  # Example: process the do
-    #date = record.get("date")  # Replace with the field name for the date
-    #daily_log = record.get("log")  # Replace with the field name for the attendance log
-    # Perform operations on date and daily_log
-    
-    # Iterate through each document in the collection
-    #for record in attendance_log.find():
-     #   print(record)  # Example: process the document
-# Keep attendance_log_collection as the MongoDB collection
+
 def clean_attendance_log():
   
     for record in attendance_log_collection.find():  # Correct MongoDB collection query
