@@ -1,4 +1,5 @@
-from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify,session
+from pymongo import MongoClient
+from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify
 from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
@@ -7,24 +8,24 @@ import json
 import face_recognition
 from datetime import datetime
 from imgaug import augmenters as iaa
-from flask_pymongo import PyMongo
-from werkzeug.security import generate_password_hash, check_password_hash
-import sys
-sys.dont_write_bytecode = True
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/Log-in"
-app.secret_key = os.urandom(24)
-mongo = PyMongo(app)
-
-
-
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads1')  # Used os.getcwd() to get the current working directory
 app.secret_key = 'supersecretkey'  # Needed for flash messages
 socketio = SocketIO(app)  # Initialize Flask-SocketIO
 
 BASE_DIR = os.getcwd()
-
+MONGO_URI = "mongodb://127.0.0.1:27017/attendance_system"
+try:
+ client = MongoClient(MONGO_URI)
+ db = client['attendance_system']
+ students_collection = db['students']
+ attendance_collection = db['attendance']
+ attendance_log_collection = db['attendance_log']
+ print("MongoDB connected succesfully")
+except Exception as e:
+ print(f"Error connecting to mongodb: {e}")
+ raise
 # Ensure the upload folder exists
 upload_folder_path = app.config['UPLOAD_FOLDER']
 if not os.path.exists(upload_folder_path):
@@ -32,15 +33,22 @@ if not os.path.exists(upload_folder_path):
 
 # Load student data
 def load_students():
-    students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    if not os.path.exists(students_file_path):
-        return {}
-    with open(students_file_path, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading JSON: {e}")
-            return {}
+    #students_file_path = os.path.join(BASE_DIR, 'students1.json')
+    #if not os.path.exists(students_file_path):
+     #   return {}
+    #with open(students_file_path, 'r') as f:
+     #   try:
+      #      return json.load(f)
+       # except json.JSONDecodeError as e:
+        #    print(f"Error loading JSON: {e}")
+         #   return {}
+         students = {}
+         for student in students_collection.find():
+             students[str(student['_id'])] = {
+                 'name': student['name'],
+                 'image': student['image']
+             }
+         return students
 
 def augment_image(image):
     seq = iaa.Sequential([
@@ -53,39 +61,76 @@ def preprocess_image(image_path):
     image = face_recognition.load_image_file(image_path)
     # Resize image or perform other preprocessing...
     return image
-def save_students(students):
-    students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    try:
-        with open(students_file_path, 'w') as f:
-            json.dump(students, f, indent=4)  # Added indent for better readability
-    except Exception as e:
-        print(f"Error saving students file: {e}")
-        flash(f'Error saving student data: {e}', 'error')
+#def save_students(students):
+ #   students_file_path = os.path.join(BASE_DIR, 'students1.json')
+  #  try:
+   #     with open(students_file_path, 'w') as f:
+    #        json.dump(students, f, indent=4)  # Added indent for better readability
+    #except Exception as e:
+     #   print(f"Error saving students file: {e}")
+      #  flash(f'Error saving student data: {e}', 'error')
 
-students = load_students()
+#students = load_students()
+def save_students(student_id, student_data):
+    students_collection.update_one(
+        {'_id': student_id},
+        {'$set': student_data},
+            
+        upsert = True
+    )
 
 # Load attendance log
+#def load_attendance_log():
+   # attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
+    #if not os.path.exists(attendance_log_path):
+     #   return {}
+    #with open(attendance_log_path, 'r') as f:
+     #   try:
+      #      return json.load(f)
+       # except json.JSONDecodeError as e:
+        #    print(f"Error loading attendance log: {e}")
+         #   return {}
+    #attendance_log = {}
+    #for record in attendance_collection.find():
+        #     date = record['date']
+       #      if date not in attendance_log_collection:
+      #           attendance_log_collection[date] = {}
+     #        attendance_log_collection[date][record['student_name']] = record['status']
+    #return attendance_log_collection  
 def load_attendance_log():
-    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-    if not os.path.exists(attendance_log_path):
-        return {}
-    with open(attendance_log_path, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading attendance log: {e}")
-            return {}
+    # Assuming you want to load the attendance log from MongoDB
+    attendance_log_collection = db.attendance_log_collection
+    
+    # Fetch the entire attendance log
+    attendance_log = {}
+    
+    # Use a query to find all documents
+    for record in attendance_log_collection.find():
+        date = record.get('date')
+        attendance_log[date] = record.get('daily_log', {})
+    
+    return attendance_log
 
-def save_attendance_log(attendance_log):
-    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-    try:
-        with open(attendance_log_path, 'w') as f:
-            json.dump(attendance_log, f, indent=4)
-    except Exception as e:
-        print(f"Error saving attendance log file: {e}")
+                                            
+
+#def save_attendance_log(attendance_log):
+ #   attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
+  #  try:
+   #     with open(attendance_log_path, 'w') as f:
+     #       json.dump(attendance_log, f, indent=4)
+    #except Exception as e:
+      #  print(f"Error saving attendance log file: {e}")
 
 attendance_log = load_attendance_log()
-
+def save_attendance_log(date, student_name, status):
+    attendance_collection.update_one(
+        {'date': date, 'student_name': student_name},
+        {'$set':{'status': status}},
+        upsert=True
+            
+        
+    )
+students = load_students()
 # Load reference encodings
 reference_encodings = {}
 for student_id, student_data in students.items():
@@ -113,8 +158,9 @@ def handle_mark_present(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-        attendance_log.setdefault(date, {})[student_name] = 'Present'
-        save_attendance_log(attendance_log)
+       # attendance_log.setdefault(date, {})[student_name] = 'Present'
+        #save_attendance_log(attendance_log)
+        save_attendance_log(date, student_name, 'Present')
         print(f"{student_name} marked as present")
 
 @socketio.on('mark_as_absent')
@@ -122,8 +168,9 @@ def handle_mark_absent(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-        attendance_log.setdefault(date, {})[student_name] = 'Absent'
-        save_attendance_log(attendance_log)
+        #attendance_log.setdefault(date, {})[student_name] = 'Absent'
+        #save_attendance_log(attendance_log)
+        save_attendance_log(date, student_name, 'Absent')
         print(f"{student_name} marked as absent")
 
 def generate_frames():
@@ -182,14 +229,9 @@ def generate_frames():
     video_capture.release()
 
 @app.route('/')
-def index():
-    if 'user' not in session:
-        return redirect(url_for('login')) 
-    return redirect(url_for('dashboard')) 
 @app.route('/Home')
 def home():
     return render_template('home.html')
-
 
 @app.route('/Addstudent', methods=['GET', 'POST'])
 def Addstudent():
@@ -224,8 +266,8 @@ def Addstudent():
 
                 # Save student data
                 students[student_id] = {'name': student_name, 'image': filename}
-                save_students(students)
-                
+                #save_students(students)
+                save_students(student_id,{'name': student_name, 'image': filename})
                 # Update reference encodings
                 image = face_recognition.load_image_file(file_path)
                 encoding = face_recognition.face_encodings(image)[0]
@@ -239,50 +281,6 @@ def Addstudent():
 
     # If GET request or no action taken, return the Addstudent page
     return render_template('Addstudent.html')
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        
-        # Check if user exists in the database
-        user = mongo.db.users.find_one({'email': email})
-        
-        if user and check_password_hash(user['password'], password):
-            session['user'] = email
-       
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid Email or Password. Please try again.', 'error')
-            return redirect(url_for('login'))
-    
-    return render_template('login.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        email = request.form['email']
-        name= request.form['name']
-        password = request.form['password']
-        password_hash = generate_password_hash(password)  # Store hashed password
-        
-        # Check if user already exists
-        if mongo.db.users.find_one({'email': email}):
-            flash('Email already exists. Please choose a different email.', 'error')
-            return redirect(url_for('register'))
-        
-        # Insert new user into the database
-        mongo.db.users.insert_one({'name':name, 'email': email, 'password': password_hash})
-        flash('Registration Successful!', 'success')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-   
-    return redirect(url_for('login'))
 
 @app.route('/Addsubject')
 def Addsubject():
@@ -361,35 +359,41 @@ def view_attendance():
                            attendance_status=attendance_status, selected_date=selected_date, 
  
                           total_attendance_count=total_attendance_count, students=students)
+#def clean_attendance_log():
+   # for date, daily_log in attendance_log.items():
+  # for record in attendance_log.find():  # Iterate through each document in the collection
+    #for record in attendance_log.find():
+        #print(record)  # Example: process the do
+    #date = record.get("date")  # Replace with the field name for the date
+    #daily_log = record.get("log")  # Replace with the field name for the attendance log
+    # Perform operations on date and daily_log
+    
+    # Iterate through each document in the collection
+    #for record in attendance_log.find():
+     #   print(record)  # Example: process the document
+# Keep attendance_log_collection as the MongoDB collection
 def clean_attendance_log():
-    for date, daily_log in attendance_log.items():
+  
+    for record in attendance_log_collection.find():  # Correct MongoDB collection query
+        date = record.get('date')
+        daily_log = record.get('daily_log', None)
+
+        if not daily_log:  # If daily_log is None or empty, skip the record
+            print(f"Invalid or missing 'log' for record with date {date}. Skipping...")
+            continue
+        
+        # Loop through each student and mark attendance
         for student_name in daily_log:
-            attendance_log[date][student_name] = 'Present'
-    save_attendance_log(attendance_log)
-clean_attendance_log()
-
-
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))  
+            # Use update_one to update attendance status for each student
+            attendance_log_collection.update_one(
+                {"date": date},  # Filter by date
+                {"$set": {f"attendance.{student_name}": "Present"}},  # Update attendance for the student
+                upsert=True 
+            )
     
-    
-    user_email = session['user']
-    user = mongo.db.users.find_one({'email': user_email})
-    
-    if user:
-        admin_name = user['name']
-    else:
-        admin_name = "Admin" 
-
- 
-
-    return render_template('dashboard.html', 
-                           admin_name=admin_name,
-    )
+    print("Attendance log cleaned successfully.")
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)   
+    clean_attendance_log()
+    socketio.run(app, debug=True)
