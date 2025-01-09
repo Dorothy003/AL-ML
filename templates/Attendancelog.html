@@ -30,8 +30,7 @@
             <ul>
                 <li><a href="{{ url_for('home') }}">Home</a></li>
                 <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
-                
-                <li><a href="{{ url_for('Attendancelog') }}">Attendance log</a></li>
+                <li><a href="{{ url_for('Attendancelog') }}">Attendance Log</a></li>
             </ul>
         </nav>
     </div>
@@ -43,41 +42,35 @@
     <div class="outer-wrapper">
         <div class="inner-wrapper">
             <table>
-            <thead>
-                <tr>
-                    <th>Roll No</th>
-                    <th>Student Name</th>
-                    <th>attendance</th>
-                    {% for date in dates %}
-                        <th>{{ date }}</th>
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Name</th>
+                        {% for date in dates %}
+                            <th>{{ date }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_id, student_data in students.items() %}
+                        <tr>
+                            <td>{{ student_id }}</td>
+                            <td>{{ student_data['name'] }}</td>
+                            {% for date in dates %}
+                                <td>
+                                    {% if attendance_log.get(date) and attendance_log[date].get(student_id) %}
+                                        {{ attendance_log[date][student_id] }}
+                                    {% else %}
+                                        Absent
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
                     {% endfor %}
-                   
-                </tr>
-            </thead>
-            <tbody>
-    {% for student_id, student_data in students.items() %}
-        <tr>
-            <td>{{ student_data['name'] }}</td>
-            <td>{{ student_id }}</td>
-           
-            {% for date in dates %}
-                <td>{{ attendance_log.get(date, {}).get(student_data['name'], 'Absent') }}</td>
-            {% endfor %}
-        </tr>
-    {% endfor %}
-</tbody>
-
-            </tbody>
-        </table>
-    </div>
-    <div class="e1">
-        <img src="{{ url_for('static', filename='assets/image/e1.png') }}">
-    </div>
-    <div class="e2">
-        <img src="{{ url_for('static', filename='assets/image/e2.png') }}">
-    </div>
-    <div class="egroup">
-        <img src="static/assets/image/twin spheres.png">
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>
+

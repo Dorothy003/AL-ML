@@ -5,42 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Attendance</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        form {
-            margin-bottom: 20px;
-        }
-        select, button {
-            padding: 10px;
-            margin-top: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-    </style>
+        
+            table {
+                width: 100%;
+                border-collapse: collapse; 
+            }
+            th, td {
+                border: 1px solid black; 
+                padding: 8px; 
+                text-align: left; 
+            }
+            th {
+                background-color: #f2f2f2;
+            }
+        </style>
+        
+    
 </head>
 <body>
     <div class="container">
@@ -71,21 +51,17 @@
                 <tbody>
                     {% for student_id, student_data in students.items() %}
                         <tr>
-                            <td>{{ student_data.name }}</td>
+                            <td>{{ student_data['name'] }}</td>
                             <td>
-                               {% if selected_date in attendance_status %} 
-                                  
-                                    {% if student_data.name in attendance_status[selected_date] %}
-                                       Present
-                                       
-                                      <!--  {{ attendance_status[student_data.name] }} -->
+                               {% if selected_date in attendance_log %} 
+                                    {% if student_data['name'] in attendance_log[selected_date] %}
+                                       {{ attendance_log[selected_date][student_data['name']] }}
                                     {% else %}
                                         Absent
                                     {% endif %}
-                                    {% else %}
-                                       Absent
-                                {% endif %} 
-
+                               {% else %}
+                                    Absent
+                               {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
