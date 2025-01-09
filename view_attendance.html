@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Attendance</title>
+    <style>
+        
+            table {
+                width: 100%;
+                border-collapse: collapse; 
+            }
+            th, td {
+                border: 1px solid black; 
+                padding: 8px; 
+                text-align: left; 
+            }
+            th {
+                background-color: #f2f2f2;
+            }
+        </style>
+        
+    
+</head>
+<body>
+    <div class="container">
+        <h1>View Attendance</h1>
+        
+        <!-- Attendance Selection Form -->
+        <form method="POST" action="{{ url_for('view_attendance') }}">
+            <label for="selected_date">Select Date:</label>
+            <select name="selected_date" id="selected_date">
+                <option value="">-- Select the date --</option>
+                {% for date in dates %}
+                    <option value="{{ date }}" {% if date == selected_date %}selected{% endif %}>{{ date }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">View Attendance</button>
+        </form>
+
+        <!-- Attendance Details -->
+        {% if selected_date %}
+            <h2>Attendance for {{ selected_date }}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student_id, student_data in students.items() %}
+                        <tr>
+                            <td>{{ student_data['name'] }}</td>
+                            <td>
+                               {% if selected_date in attendance_log %} 
+                                    {% if student_data['name'] in attendance_log[selected_date] %}
+                                       {{ attendance_log[selected_date][student_data['name']] }}
+                                    {% else %}
+                                        Absent
+                                    {% endif %}
+                               {% else %}
+                                    Absent
+                               {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        <!-- Total Attendance Count -->
+        <h2>Total Attendance Count</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Total Days Present</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student_name, count in total_attendance_count.items() %}
+                    <tr>
+                        <td>{{ student_name }}</td>
+                        <td>{{ count }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -239,7 +239,6 @@ def Addstudent():
                 flash(f'Error adding student: {e}', 'error')
                 print(f"Error: {e}")
 
-    # If GET request or no action taken, return the Addstudent page
     return render_template('Addstudent.html')
 
 @app.route('/Addsubject')
@@ -248,9 +247,43 @@ def Addsubject():
 
 @app.route('/Attendancelog')
 def Attendancelog():
-    dates = sorted(attendance_log.keys())
-    return render_template('Attendancelog.html', students=students, attendance_log=attendance_log, dates=dates)
+    # Fetch students and attendance logs from MongoDB
+    students_records = list(db.students.find({}))
+    attendance_records = list(db.attendance.find({}))
+    
+    students = {}
+    for record in students_records:
+        student_id = str(record['_id'])  
+        student_name = record.get('name', "Unknown")  # Default name if not found
+        students[student_id] = {'name': student_name}
+    
+    # Initialize the attendance log
+    attendance_log = {}
+    for record in attendance_records:
+        student_name = record.get('student_name')  
+        date = record.get('date') 
+        status = record.get('status', "Absent")  # Default to "Absent" if status is missing
+        
+        if not student_name or not date:
+            continue  # Skip if student_name or date is missing
+        
+        if date not in attendance_log:
+            attendance_log[date] = {}
+        
+        # Find the student_id by matching the name
+        student_id = None
+        for sid, student_data in students.items():
+            if student_data['name'] == student_name:
+                student_id = sid
+                break
+        
+        if student_id:  # Ensure the student_id is found
+            attendance_log[date][student_id] = status
 
+    # Sort the dates
+    dates = sorted(attendance_log.keys())
+    
+    return render_template('Attendancelog.html', students=students, attendance_log=attendance_log, dates=dates)
 @app.route('/mark_attendance_ajax', methods=['POST'])
 def mark_attendance_ajax():
     data = request.get_json()
@@ -290,34 +323,52 @@ def load_json_data():
     return students, attendance_log
 @app.route('/view_attendance', methods=['GET', 'POST'])
 def view_attendance():
-    students, attendance_log = load_json_data()
-    selected_date = None
-    attendance_status = {}
-    total_attendance_count = {student_data['name']: 0 for student_data in students.values()}
+    # Fetch all students and attendance records from MongoDB
+    students_records = list(db.students.find({}))
+    attendance_records = list(db.attendance.find({}))
+    
+    # Create a dictionary to map student names and their IDs
+    students = {}
+    for record in students_records:
+        student_id = str(record['_id'])
+        student_name = record.get('name', "Unknown")
+        students[student_id] = {'name': student_name}
+    
+    #  attendance_status dictionary
+    attendance_log = {}
+    for record in attendance_records:
+        student_name = record.get('student_name')
+        date = record.get('date')
+        status = record.get('status', "Absent")
+        
+        if not student_name or not date:
+            continue
+        
+        if date not in attendance_log:
+            attendance_log[date] = {}
+        
+        attendance_log[date][student_name] = status
 
+    # Get selected date from form
+    selected_date = None
     if request.method == 'POST':
         selected_date = request.form.get('selected_date')
-        if selected_date:
-           if selected_date in attendance_log:
-                attendance_status = attendance_log[selected_date]
-        else:
-            flash(f'No attendance record found for {selected_date}.', 'error')
+    
+    # Calculate total attendance count
+    total_attendance_count = {}
+    for date_data in attendance_log.values():
+        for student_name, status in date_data.items():
+            if status == "Present":
+                total_attendance_count[student_name] = total_attendance_count.get(student_name, 0) + 1
 
-    # Calculate total attendance
-    for date, daily_log in attendance_log.items():
-        for student_name in daily_log.keys():
-           
-            total_attendance_count[student_name] += 1
-
-    # Include today's date
-    today_date = datetime.now().strftime("%Y-%m-%d")
-    dates = sorted(list(attendance_log.keys()) + [today_date])  # Convert dict_keys to list and include today’s date
-
-    return render_template('view_attendance.html', dates=dates, 
-                           attendance_status=attendance_status, selected_date=selected_date, 
- 
-                          total_attendance_count=total_attendance_count, students=students)
-
+    return render_template(
+        'view_attendance.html', 
+        students=students, 
+        attendance_log=attendance_log, 
+        dates=attendance_log.keys(), 
+        selected_date=selected_date, 
+        total_attendance_count=total_attendance_count
+    )
 def clean_attendance_log():
   
     for record in attendance_log_collection.find():  # Correct MongoDB collection query
@@ -330,7 +381,6 @@ def clean_attendance_log():
         
         # Loop through each student and mark attendance
         for student_name in daily_log:
-            # Use update_one to update attendance status for each student
             attendance_log_collection.update_one(
                 {"date": date},  # Filter by date
                 {"$set": {f"attendance.{student_name}": "Present"}},  # Update attendance for the student
