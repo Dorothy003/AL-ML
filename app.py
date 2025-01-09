@@ -11,6 +11,7 @@ from flask_pymongo import PyMongo
 from werkzeug.security import generate_password_hash, check_password_hash
 import sys
 sys.dont_write_bytecode = True
+from pymongo import MongoClient
 
 app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/Log-in"
@@ -24,7 +25,17 @@ app.secret_key = 'supersecretkey'  # Needed for flash messages
 socketio = SocketIO(app)  # Initialize Flask-SocketIO
 
 BASE_DIR = os.getcwd()
-
+MONGO_URI = "mongodb://127.0.0.1:27017/attendance_system"
+try:
+ client = MongoClient(MONGO_URI)
+ db = client['attendance_system']
+ students_collection = db['students']
+ attendance_collection = db['attendance']
+ attendance_log_collection = db['attendance_log']
+ print("MongoDB connected succesfully")
+except Exception as e:
+ print(f"Error connecting to mongodb: {e}")
+ raise
 # Ensure the upload folder exists
 upload_folder_path = app.config['UPLOAD_FOLDER']
 if not os.path.exists(upload_folder_path):
@@ -32,15 +43,14 @@ if not os.path.exists(upload_folder_path):
 
 # Load student data
 def load_students():
-    students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    if not os.path.exists(students_file_path):
-        return {}
-    with open(students_file_path, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading JSON: {e}")
-            return {}
+  
+         students = {}
+         for student in students_collection.find():
+             students[str(student['_id'])] = {
+                 'name': student['name'],
+                 'image': student['image']
+             }
+         return students
 
 def augment_image(image):
     seq = iaa.Sequential([
@@ -53,38 +63,39 @@ def preprocess_image(image_path):
     image = face_recognition.load_image_file(image_path)
     # Resize image or perform other preprocessing...
     return image
-def save_students(students):
-    students_file_path = os.path.join(BASE_DIR, 'students1.json')
-    try:
-        with open(students_file_path, 'w') as f:
-            json.dump(students, f, indent=4)  # Added indent for better readability
-    except Exception as e:
-        print(f"Error saving students file: {e}")
-        flash(f'Error saving student data: {e}', 'error')
-
-students = load_students()
+def save_students(student_id, student_data):
+    students_collection.update_one(
+        {'_id': student_id},
+        {'$set': student_data},
+            
+        upsert = True
+    )
 
 # Load attendance log
 def load_attendance_log():
-    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-    if not os.path.exists(attendance_log_path):
-        return {}
-    with open(attendance_log_path, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError as e:
-            print(f"Error loading attendance log: {e}")
-            return {}
-
-def save_attendance_log(attendance_log):
-    attendance_log_path = os.path.join(BASE_DIR, 'attendance_log.json')
-    try:
-        with open(attendance_log_path, 'w') as f:
-            json.dump(attendance_log, f, indent=4)
-    except Exception as e:
-        print(f"Error saving attendance log file: {e}")
+    # Assuming you want to load the attendance log from MongoDB
+    attendance_log_collection = db.attendance_log_collection
+    
+    # Fetch the entire attendance log
+    attendance_log = {}
+    
+    # Use a query to find all documents
+    for record in attendance_log_collection.find():
+        date = record.get('date')
+        attendance_log[date] = record.get('daily_log', {})
+    
+    return attendance_log
 
 attendance_log = load_attendance_log()
+def save_attendance_log(date, student_name, status):
+    attendance_collection.update_one(
+        {'date': date, 'student_name': student_name},
+        {'$set':{'status': status}},
+        upsert=True
+            
+        
+    )
+students = load_students()
 
 # Load reference encodings
 reference_encodings = {}
@@ -224,8 +235,8 @@ def Addstudent():
 
                 # Save student data
                 students[student_id] = {'name': student_name, 'image': filename}
-                save_students(students)
-                
+                #save_students(students)
+                save_students(student_id,{'name': student_name, 'image': filename})
                 # Update reference encodings
                 image = face_recognition.load_image_file(file_path)
                 encoding = face_recognition.face_encodings(image)[0]
@@ -237,7 +248,6 @@ def Addstudent():
                 flash(f'Error adding student: {e}', 'error')
                 print(f"Error: {e}")
 
-    # If GET request or no action taken, return the Addstudent page
     return render_template('Addstudent.html')
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -290,9 +300,43 @@ def Addsubject():
 
 @app.route('/Attendancelog')
 def Attendancelog():
-    dates = sorted(attendance_log.keys())
-    return render_template('Attendancelog.html', students=students, attendance_log=attendance_log, dates=dates)
+    # Fetch students and attendance logs from MongoDB
+    students_records = list(db.students.find({}))
+    attendance_records = list(db.attendance.find({}))
+    
+    students = {}
+    for record in students_records:
+        student_id = str(record['_id'])  
+        student_name = record.get('name', "Unknown")  # Default name if not found
+        students[student_id] = {'name': student_name}
+    
+    # Initialize the attendance log
+    attendance_log = {}
+    for record in attendance_records:
+        student_name = record.get('student_name')  
+        date = record.get('date') 
+        status = record.get('status', "Absent")  # Default to "Absent" if status is missing
+        
+        if not student_name or not date:
+            continue  # Skip if student_name or date is missing
+        
+        if date not in attendance_log:
+            attendance_log[date] = {}
+        
+        # Find the student_id by matching the name
+        student_id = None
+        for sid, student_data in students.items():
+            if student_data['name'] == student_name:
+                student_id = sid
+                break
+        
+        if student_id:  # Ensure the student_id is found
+            attendance_log[date][student_id] = status
 
+    # Sort the dates
+    dates = sorted(attendance_log.keys())
+    
+    return render_template('Attendancelog.html', students=students, attendance_log=attendance_log, dates=dates)
 @app.route('/mark_attendance_ajax', methods=['POST'])
 def mark_attendance_ajax():
     data = request.get_json()
@@ -316,9 +360,6 @@ def mark_attendance_ajax():
 
     return jsonify({'message': f'Attendance for {student_name} on {date} marked as {status}'}), 200
 
-# @app.route('/subject_video_feed/<subject>')
-# def subject_video_feed(subject):
-#     return Response(generate_frames_for_subject(subject), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/video_feed_page')
 def video_feed_page():
@@ -334,39 +375,72 @@ def load_json_data():
     return students, attendance_log
 @app.route('/view_attendance', methods=['GET', 'POST'])
 def view_attendance():
-    students, attendance_log = load_json_data()
-    selected_date = None
-    attendance_status = {}
-    total_attendance_count = {student_data['name']: 0 for student_data in students.values()}
+    # Fetch all students and attendance records from MongoDB
+    students_records = list(db.students.find({}))
+    attendance_records = list(db.attendance.find({}))
+    
+    # Create a dictionary to map student names and their IDs
+    students = {}
+    for record in students_records:
+        student_id = str(record['_id'])
+        student_name = record.get('name', "Unknown")
+        students[student_id] = {'name': student_name}
+    
+    #  attendance_status dictionary
+    attendance_log = {}
+    for record in attendance_records:
+        student_name = record.get('student_name')
+        date = record.get('date')
+        status = record.get('status', "Absent")
+        
+        if not student_name or not date:
+            continue
+        
+        if date not in attendance_log:
+            attendance_log[date] = {}
+        
+        attendance_log[date][student_name] = status
 
+    # Get selected date from form
+    selected_date = None
     if request.method == 'POST':
         selected_date = request.form.get('selected_date')
-        if selected_date:
-           if selected_date in attendance_log:
-                attendance_status = attendance_log[selected_date]
-        else:
-            flash(f'No attendance record found for {selected_date}.', 'error')
+    
+    # Calculate total attendance count
+    total_attendance_count = {}
+    for date_data in attendance_log.values():
+        for student_name, status in date_data.items():
+            if status == "Present":
+                total_attendance_count[student_name] = total_attendance_count.get(student_name, 0) + 1
 
-    # Calculate total attendance
-    for date, daily_log in attendance_log.items():
-        for student_name in daily_log.keys():
-           
-            total_attendance_count[student_name] += 1
-
-    # Include today's date
-    today_date = datetime.now().strftime("%Y-%m-%d")
-    dates = sorted(list(attendance_log.keys()) + [today_date])  # Convert dict_keys to list and include today’s date
-
-    return render_template('view_attendance.html', dates=dates, 
-                           attendance_status=attendance_status, selected_date=selected_date, 
- 
-                          total_attendance_count=total_attendance_count, students=students)
+    return render_template(
+        'view_attendance.html', 
+        students=students, 
+        attendance_log=attendance_log, 
+        dates=attendance_log.keys(), 
+        selected_date=selected_date, 
+        total_attendance_count=total_attendance_count
+    )
 def clean_attendance_log():
-    for date, daily_log in attendance_log.items():
+  
+    for record in attendance_log_collection.find():  # Correct MongoDB collection query
+        date = record.get('date')
+        daily_log = record.get('daily_log', None)
+
+        if not daily_log:  # If daily_log is None or empty, skip the record
+            print(f"Invalid or missing 'log' for record with date {date}. Skipping...")
+            continue
+        
+        # Loop through each student and mark attendance
         for student_name in daily_log:
-            attendance_log[date][student_name] = 'Present'
-    save_attendance_log(attendance_log)
-clean_attendance_log()
+            attendance_log_collection.update_one(
+                {"date": date},  # Filter by date
+                {"$set": {f"attendance.{student_name}": "Present"}},  # Update attendance for the student
+                upsert=True 
+            )
+    
+    print("Attendance log cleaned successfully.")
+
 
 
 
@@ -392,4 +466,5 @@ def dashboard():
 
 
 if __name__ == "__main__":
+    clean_attendance_log()
     socketio.run(app, debug=True)   
