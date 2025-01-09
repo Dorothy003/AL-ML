@@ -120,14 +120,14 @@ def handle_connect():
     print("Client connected")
 
 @socketio.on('mark_as_present')
+@socketio.on('mark_as_present')
 def handle_mark_present(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-        attendance_log.setdefault(date, {})[student_name] = 'Present'
-        save_attendance_log(attendance_log)
+   
+        save_attendance_log(date, student_name, 'Present')
         print(f"{student_name} marked as present")
-
 @socketio.on('mark_as_absent')
 def handle_mark_absent(data):
     student_name = data.get('name')
