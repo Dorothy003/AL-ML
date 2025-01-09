@@ -1,5 +1,4 @@
-from pymongo import MongoClient
-from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, Response, request, redirect, url_for, flash, jsonify,session
 from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
@@ -8,8 +7,19 @@ import json
 import face_recognition
 from datetime import datetime
 from imgaug import augmenters as iaa
+from flask_pymongo import PyMongo
+from werkzeug.security import generate_password_hash, check_password_hash
+import sys
+sys.dont_write_bytecode = True
+from pymongo import MongoClient
 
 app = Flask(__name__)
+app.config["MONGO_URI"] = "mongodb://localhost:27017/Log-in"
+app.secret_key = os.urandom(24)
+mongo = PyMongo(app)
+
+
+
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads1')  # Used os.getcwd() to get the current working directory
 app.secret_key = 'supersecretkey'  # Needed for flash messages
 socketio = SocketIO(app)  # Initialize Flask-SocketIO
@@ -53,9 +63,6 @@ def preprocess_image(image_path):
     image = face_recognition.load_image_file(image_path)
     # Resize image or perform other preprocessing...
     return image
-
-
-#students = load_students()
 def save_students(student_id, student_data):
     students_collection.update_one(
         {'_id': student_id},
@@ -64,7 +71,7 @@ def save_students(student_id, student_data):
         upsert = True
     )
 
-
+# Load attendance log
 def load_attendance_log():
     # Assuming you want to load the attendance log from MongoDB
     attendance_log_collection = db.attendance_log_collection
@@ -79,9 +86,6 @@ def load_attendance_log():
     
     return attendance_log
 
-                                            
-
-
 attendance_log = load_attendance_log()
 def save_attendance_log(date, student_name, status):
     attendance_collection.update_one(
@@ -92,6 +96,7 @@ def save_attendance_log(date, student_name, status):
         
     )
 students = load_students()
+
 # Load reference encodings
 reference_encodings = {}
 for student_id, student_data in students.items():
@@ -119,8 +124,8 @@ def handle_mark_present(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-   
-        save_attendance_log(date, student_name, 'Present')
+        attendance_log.setdefault(date, {})[student_name] = 'Present'
+        save_attendance_log(attendance_log)
         print(f"{student_name} marked as present")
 
 @socketio.on('mark_as_absent')
@@ -128,9 +133,8 @@ def handle_mark_absent(data):
     student_name = data.get('name')
     if student_name:
         date = datetime.now().strftime("%Y-%m-%d")
-        #attendance_log.setdefault(date, {})[student_name] = 'Absent'
-        #save_attendance_log(attendance_log)
-        save_attendance_log(date, student_name, 'Absent')
+        attendance_log.setdefault(date, {})[student_name] = 'Absent'
+        save_attendance_log(attendance_log)
         print(f"{student_name} marked as absent")
 
 def generate_frames():
@@ -189,9 +193,14 @@ def generate_frames():
     video_capture.release()
 
 @app.route('/')
+def index():
+    if 'user' not in session:
+        return redirect(url_for('login')) 
+    return redirect(url_for('dashboard')) 
 @app.route('/Home')
 def home():
     return render_template('home.html')
+
 
 @app.route('/Addstudent', methods=['GET', 'POST'])
 def Addstudent():
@@ -240,6 +249,50 @@ def Addstudent():
                 print(f"Error: {e}")
 
     return render_template('Addstudent.html')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        # Check if user exists in the database
+        user = mongo.db.users.find_one({'email': email})
+        
+        if user and check_password_hash(user['password'], password):
+            session['user'] = email
+       
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid Email or Password. Please try again.', 'error')
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        name= request.form['name']
+        password = request.form['password']
+        password_hash = generate_password_hash(password)  # Store hashed password
+        
+        # Check if user already exists
+        if mongo.db.users.find_one({'email': email}):
+            flash('Email already exists. Please choose a different email.', 'error')
+            return redirect(url_for('register'))
+        
+        # Insert new user into the database
+        mongo.db.users.insert_one({'name':name, 'email': email, 'password': password_hash})
+        flash('Registration Successful!', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+   
+    return redirect(url_for('login'))
 
 @app.route('/Addsubject')
 def Addsubject():
@@ -306,7 +359,6 @@ def mark_attendance_ajax():
     save_attendance_log(attendance_log)
 
     return jsonify({'message': f'Attendance for {student_name} on {date} marked as {status}'}), 200
-
 
 
 @app.route('/video_feed_page')
@@ -390,6 +442,29 @@ def clean_attendance_log():
     print("Attendance log cleaned successfully.")
 
 
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user' not in session:
+        return redirect(url_for('login'))  
+    
+    
+    user_email = session['user']
+    user = mongo.db.users.find_one({'email': user_email})
+    
+    if user:
+        admin_name = user['name']
+    else:
+        admin_name = "Admin" 
+
+ 
+
+    return render_template('dashboard.html', 
+                           admin_name=admin_name,
+    )
+
+
 if __name__ == "__main__":
     clean_attendance_log()
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True)   
