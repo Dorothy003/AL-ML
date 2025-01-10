@@ -1,81 +1,166 @@
-import face_recognition
 import os
+import cv2
+import face_recognition
 import numpy as np
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from imgaug import augmenters as iaa
+import bson
+from datetime import datetime
+from pymongo import MongoClient
 
-# Define the path to the uploads folder
-uploads_folder = 'uploads1'
-reference_encodings = {}
-students = {}
+# MongoDB Setup
+MONGO_URI = "mongodb://127.0.0.1:27017/attendance_system"
+client = MongoClient(MONGO_URI)
+db = client['attendance_system']
+students_collection = db['students']
 
-# Step 1: Load the training images and extract encodings
-for image_file in os.listdir(uploads_folder):
-    student_id = os.path.splitext(image_file)[0]  # Use the file name (without extension) as the student ID (roll number)
-    image_path = os.path.join(uploads_folder, image_file)
-    
-    # Load the image and extract face encodings
+# Path where student photos will be saved
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads1')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Augmentation function for images (optional, helps with model generalization)
+def augment_image(image):
+    seq = iaa.Sequential([
+        iaa.Fliplr(0.5),  # horizontal flips
+        iaa.Affine(rotate=(-30, 30)),  # rotate images
+        iaa.AdditiveGaussianNoise(scale=(0, 0.05*255))  # add gaussian noise
+    ])
+    return seq.augment_image(image)
+
+# Function to process images and extract face encodings
+def preprocess_image(image_path):
     image = face_recognition.load_image_file(image_path)
-    face_encodings = face_recognition.face_encodings(image)
+    face_locations = face_recognition.face_locations(image)
+    face_encodings = face_recognition.face_encodings(image, face_locations)
+    
+    return face_encodings
 
-    if face_encodings:
-        reference_encodings[student_id] = face_encodings[0]
-        students[student_id] = student_id  # Store student information
-    else:
-        print(f"No face found in image for student {student_id} at {image_path}")
+# Save student to MongoDB
+def save_student(student_id, student_data):
+    students_collection.update_one(
+        {'_id': student_id},
+        {'$set': student_data},
+        upsert=True
+    )
 
-# Step 2: Test the model using the same images
-test_labels = []
-predicted_labels = []
+# Train the system with students' images
+def train_system():
+    # Dictionary to hold the face encodings of all students
+    reference_encodings = {}
 
-def test_accuracy():
-    for image_file in os.listdir(uploads_folder):
-        student_id = os.path.splitext(image_file)[0]  # Use the file name (without extension) as the student ID (roll number)
-        image_path = os.path.join(uploads_folder, image_file)
-        
-        # Load the test image
+    # Iterate through all student images and add them to the reference encoding database
+    for student in students_collection.find():
+        student_id = str(student['_id'])
+        student_name = student['name']
+        image_filename = student['image']
+        image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+
+        # Preprocess the image and extract face encodings
+        encodings = preprocess_image(image_path)
+        if encodings:
+            reference_encodings[student_id] = encodings[0]
+            print(f"Encoding added for {student_name}")
+        else:
+            print(f"No face found for {student_name}")
+
+    return reference_encodings
+
+# Train and save the encodings
+def save_face_encodings_to_file(reference_encodings):
+    with open('face_encodings.npy', 'wb') as f:
+        np.save(f, reference_encodings)
+    print("Face encodings saved to file.")
+
+# Load encodings from file (for future use)
+def load_face_encodings_from_file():
+    try:
+        with open('face_encodings.npy', 'rb') as f:
+            return np.load(f, allow_pickle=True).item()
+    except FileNotFoundError:
+        print("Face encodings file not found.")
+        return {}
+
+# Test the system with a list of images (for testing accuracy)
+def test_system(reference_encodings, test_images, true_labels):
+    predictions = []
+    for image_path in test_images:
         image = face_recognition.load_image_file(image_path)
-        face_encodings = face_recognition.face_encodings(image)
+        face_locations = face_recognition.face_locations(image)
+        face_encodings = face_recognition.face_encodings(image, face_locations)
         
         if face_encodings:
-            face_encoding = face_encodings[0]
-            # Compare the face encoding with the reference encodings
-            matches = face_recognition.compare_faces(list(reference_encodings.values()), face_encoding)
-            face_distances = face_recognition.face_distance(list(reference_encodings.values()), face_encoding)
-            best_match_index = np.argmin(face_distances)
+            # Find the closest match to the reference encodings
+            distances = face_recognition.face_distance(list(reference_encodings.values()), face_encodings[0])
+            best_match_index = np.argmin(distances)
+            student_id = list(reference_encodings.keys())[best_match_index]
+            predictions.append(student_id)
+    
+    # Calculate and print accuracy
+    accuracy = calculate_accuracy(predictions, true_labels)
+    print(f"Accuracy: {accuracy}%")
 
-            if matches[best_match_index]:
-                predicted_student_id = list(reference_encodings.keys())[best_match_index]
-            else:
-                predicted_student_id = "Unknown"
-        else:
-            predicted_student_id = "No Face Detected"
+def calculate_accuracy(predictions, true_labels):
+    """
+    Calculate the accuracy of predictions compared to true labels.
+    
+    Args:
+    predictions (list): List of predicted student IDs or names.
+    true_labels (list): List of true student IDs or names.
+    
+    Returns:
+    float: The accuracy as a percentage.
+    """
+    correct_predictions = 0
+    total_predictions = len(predictions)
+    
+    # Ensure the length of predictions matches true_labels
+    if total_predictions != len(true_labels):
+        print("Error: The number of predictions does not match the number of true labels.")
+        return None
+    
+    # Count the number of correct predictions
+    for predicted, true in zip(predictions, true_labels):
+        if predicted == true:
+            correct_predictions += 1
+    
+    # Calculate accuracy
+    accuracy = (correct_predictions / total_predictions) * 100
+    return accuracy
 
-        # Log image processing status
-        print(f"Image: {image_file}, Detected Faces: {len(face_encodings)}, Predicted: {predicted_student_id}")
+# Main function to run the training and testing process
+def main():
+    # First, make sure the student data is saved (this is where students are registered manually or by uploading photos)
+    students = [
+        # Add some sample students
+    ]
 
-        # Append the actual and predicted labels
-        test_labels.append(student_id)  # The correct student ID (roll number)
-        predicted_labels.append(predicted_student_id)
+    # Insert students into MongoDB
+    for student in students:
+        student_data = {
+            'name': student['name'],
+            'student_id': student['student_id'],
+            'image': student['image']
+        }
+        student_id = bson.ObjectId()  # Unique student ID for MongoDB
+        student_data['_id'] = student_id
+        save_student(student_id, student_data)
 
-test_accuracy()
+    # After registering students, train the system
+    reference_encodings = train_system()
 
-# Step 3: Check the accuracy
-filtered_test_labels = []
-filtered_predicted_labels = []
-
-for true_label, predicted_label in zip(test_labels, predicted_labels):
-    if predicted_label not in ["Unknown", "No Face Detected"]:
-        filtered_test_labels.append(true_label)
-        filtered_predicted_labels.append(predicted_label)
-
-# Calculate accuracy
-accuracy = accuracy_score(filtered_test_labels, filtered_predicted_labels)
-print(f"Accuracy: {accuracy:.2f}")
-
-# Classification report
-print("Classification Report:")
-print(classification_report(filtered_test_labels, filtered_predicted_labels))
-
-# Confusion matrix
-print("Confusion Matrix:")
-print(confusion_matrix(filtered_test_labels, filtered_predicted_labels))
+    # Save encodings to file for later use
+    save_face_encodings_to_file(reference_encodings)
+    
+    # Now, test the system and calculate accuracy
+    test_images = [
+        # Paths to test images
+    ]
+    
+    true_labels = [
+        # Corresponding true labels (student IDs)
+    ]
+    
+    test_system(reference_encodings, test_images, true_labels)
+    
+if __name__ == '__main__':
+    main()
