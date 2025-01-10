@@ -443,27 +443,51 @@ def clean_attendance_log():
 
 
 
-
-@app.route('/dashboard')
+from bson import ObjectId
+@app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))  
-    
-    
-    user_email = session['user']
-    user = mongo.db.users.find_one({'email': user_email})
-    
-    if user:
-        admin_name = user['name']
-    else:
-        admin_name = "Admin" 
+    try:
+        if 'user' not in session:
+            return redirect(url_for('login'))
 
- 
+        user_email = session['user']
+        user = mongo.db.users.find_one({'email': user_email})
+        if not user:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('login'))
 
-    return render_template('dashboard.html', 
-                           admin_name=admin_name,
-    )
+        admin_name = user.get('name', 'Admin')
 
+        if request.method == 'POST':
+            subject_name = request.form.get('subject_name')
+            subject_code = request.form.get('subject_code')
+
+            if not subject_name or not subject_code:
+                flash('Subject name and code are required.', 'error')
+                return redirect(url_for('dashboard'))
+            try:
+                user_id = user['_id']
+                subject_id = ObjectId()
+                result = mongo.db.users.update_one(
+                    {'_id': user_id},
+                    {'$push': {'subjects': {'_id': subject_id, 'subject_name': subject_name, 'subject_code': subject_code}}}
+                )
+                if result.modified_count > 0:
+                    flash('Subject added successfully!', 'success')
+                else:
+                    flash('Failed to add subject. Please try again.', 'error')
+            except Exception as e:
+                print(f'Error adding subject: {str(e)}')
+                flash(f'Error adding subject: {str(e)}', 'error')
+
+        subjects = user.get('subjects', [])
+
+        return render_template('dashboard.html', admin_name=admin_name, subjects=subjects)
+
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        flash(f'An error occurred: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 if __name__ == "__main__":
     clean_attendance_log()
