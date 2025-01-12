@@ -5,22 +5,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Attendance</title>
     <style>
-        
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Form Styles */
+        form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 16px;
+            color: #555;
+        }
+
+        input[type="date"] {
+            padding: 8px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            color: #fff;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: #ffffff;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e9ecef;
+        }
+
+        td {
+            color: #333;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+            }
+
             table {
+                font-size: 14px;
+            }
+
+            button {
                 width: 100%;
-                border-collapse: collapse; 
+                padding: 12px;
             }
-            th, td {
-                border: 1px solid black; 
-                padding: 8px; 
-                text-align: left; 
-            }
-            th {
-                background-color: #f2f2f2;
-            }
-        </style>
-        
-    
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -29,12 +118,8 @@
         <!-- Attendance Selection Form -->
         <form method="POST" action="{{ url_for('view_attendance') }}">
             <label for="selected_date">Select Date:</label>
-            <select name="selected_date" id="selected_date">
-                <option value="">-- Select the date --</option>
-                {% for date in dates %}
-                    <option value="{{ date }}" {% if date == selected_date %}selected{% endif %}>{{ date }}</option>
-                {% endfor %}
-            </select>
+            <input type="date" name="selected_date" id="selected_date" 
+                   value="{{ selected_date }}"> <!-- Pre-fill the selected date -->
             <button type="submit">View Attendance</button>
         </form>
 

@@ -272,7 +272,7 @@ def login():
 def register():
     if request.method == 'POST':
         email = request.form['email']
-        name= request.form['name']
+        name = request.form['name']
         password = request.form['password']
         password_hash = generate_password_hash(password)  # Store hashed password
         
@@ -282,7 +282,16 @@ def register():
             return redirect(url_for('register'))
         
         # Insert new user into the database
-        mongo.db.users.insert_one({'name':name, 'email': email, 'password': password_hash})
+        user_id = mongo.db.users.insert_one({'name': name, 'email': email, 'password': password_hash}).inserted_id
+
+        # Add 8 semesters to the new user
+        semesters = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8']
+        for semester_name in semesters:
+            mongo.db.users.update_one(
+                {'_id': user_id},
+                {'$push': {'semesters': {'name': semester_name, 'subjects': []}}}
+            )
+        
         flash('Registration Successful!', 'success')
         return redirect(url_for('login'))
     
@@ -294,9 +303,26 @@ def logout():
    
     return redirect(url_for('login'))
 
-@app.route('/Addsubject')
+@app.route('/Addsubject', methods=['GET', 'POST'])
 def Addsubject():
+    if request.method == 'POST':
+        subject_name = request.form.get('subjectname')
+        semester = request.form.get('semester')
+
+        # Validate the input
+        if not subject_name or not semester:
+            flash('Subject name and semester are required.', 'error')
+            return redirect(url_for('Addsubject'))
+
+        # Save to MongoDB
+        subject_data = {'name': subject_name, 'semester': semester}
+        db.subjects.insert_one(subject_data)
+
+        flash('Subject added successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
     return render_template('Addsubject.html')
+
 
 @app.route('/Attendancelog')
 def Attendancelog():
@@ -373,6 +399,41 @@ def load_json_data():
         students = json.load(students_file)
         attendance_log = json.load(attendance_file)
     return students, attendance_log
+
+@app.route('/delete_subject', methods=['POST'])
+def delete_subject():
+    semester_name = request.form['semester_name']
+    subject_name = request.form['subject_name']
+
+    # Query the user document to find the semester
+    user_email = session.get('user')  # Get the logged-in user's email from the session
+    user = mongo.db.users.find_one({'email': user_email})
+    
+    if not user:
+        flash('User not found.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Find the semester document
+    semester = next((sem for sem in user['semesters'] if sem['name'] == semester_name), None)
+    
+    if semester:
+        # Find the subject within the semester and remove it
+        subject = next((sub for sub in semester['subjects'] if sub['name'] == subject_name), None)
+        if subject:
+            semester['subjects'].remove(subject)
+            mongo.db.users.update_one(
+                {'email': user_email},
+                {'$set': {'semesters': user['semesters']}}  # Update the semesters with the removed subject
+            )
+            flash('Subject deleted successfully!', 'success')
+        else:
+            flash('Subject not found.', 'error')
+    else:
+        flash('Semester not found.', 'error')
+
+    return redirect(url_for('dashboard'))
+
+
 @app.route('/view_attendance', methods=['GET', 'POST'])
 def view_attendance():
     # Fetch all students and attendance records from MongoDB
@@ -457,37 +518,42 @@ def dashboard():
             return redirect(url_for('login'))
 
         admin_name = user.get('name', 'Admin')
+        semesters = user.get('semesters', [])
 
+        # Handle adding a subject
         if request.method == 'POST':
             subject_name = request.form.get('subject_name')
             subject_code = request.form.get('subject_code')
+            semester_name = request.form.get('semester_name')
 
-            if not subject_name or not subject_code:
-                flash('Subject name and code are required.', 'error')
-                return redirect(url_for('dashboard'))
-            try:
-                user_id = user['_id']
-                subject_id = ObjectId()
-                result = mongo.db.users.update_one(
-                    {'_id': user_id},
-                    {'$push': {'subjects': {'_id': subject_id, 'subject_name': subject_name, 'subject_code': subject_code}}}
+            if not subject_name or not subject_code or not semester_name:
+                flash('Subject name, code, and semester are required.', 'error')
+            else:
+                subject_data = {
+                    'subject_name': subject_name,
+                    'subject_code': subject_code
+                }
+
+                # Find the correct semester and add the subject
+                mongo.db.users.update_one(
+                    {'email': user_email, 'semesters.name': semester_name},
+                    {'$push': {'semesters.$.subjects': subject_data}}
                 )
-                if result.modified_count > 0:
-                    flash('Subject added successfully!', 'success')
-                else:
-                    flash('Failed to add subject. Please try again.', 'error')
-            except Exception as e:
-                print(f'Error adding subject: {str(e)}')
-                flash(f'Error adding subject: {str(e)}', 'error')
 
-        subjects = user.get('subjects', [])
+                flash(f'Subject "{subject_name}" added to {semester_name}!', 'success')
 
-        return render_template('dashboard.html', admin_name=admin_name, subjects=subjects)
+                # Re-fetch user data to update the semesters list
+                user = mongo.db.users.find_one({'email': user_email})
+                semesters = user.get('semesters', [])
 
+        return render_template('dashboard.html', admin_name=admin_name, semesters=semesters)
     except Exception as e:
-        print(f'Error: {str(e)}')
-        flash(f'An error occurred: {str(e)}', 'error')
-        return redirect(url_for('dashboard'))
+        print(f"Error in dashboard route: {e}")
+        flash('An unexpected error occurred. Please try again later.', 'error')
+        return redirect(url_for('login'))
+
+
+
 
 if __name__ == "__main__":
     clean_attendance_log()

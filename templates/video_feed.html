@@ -5,15 +5,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
     <title>Video Feed with Full-Screen Loader</title>
     <style>
-        
         :root {
             --background: #2E2D57;
             --loader: #5b56d2;
             --load-new: #9c27b0;
         }
 
-        body,
-        html {
+        body, html {
             position: relative;
             width: 100%;
             height: 100%;
@@ -34,11 +32,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
-            z-index: 2; /* Ensure loader is on top of everything */
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2;
         }
 
-        /* Loader animation style */
         .loader {
             position: relative;
             width: 1em;
@@ -46,7 +43,6 @@
             background-color: currentColor;
             color: var(--loader);
             animation: load 1s infinite ease-in-out;
-            transform: translateZ(0);
         }
 
         .loader:before,
@@ -70,7 +66,6 @@
             animation-delay: 0.32s;
         }
 
-        /* Keyframes for the loader animation */
         @keyframes load {
             0%, 80%, 100% {
                 height: 4em;
@@ -83,85 +78,81 @@
             }
         }
 
- 
         .video-container {
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: var(--background); /* Match the background color */
+            background-color: var(--background);
             padding: 20px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
-            z-index: 1; /* Video container below loader */
-            width: 50%; /* Fixed size for the video container */
-            height: auto; /* Maintain aspect ratio */
+            z-index: 1;
+            width: 50%;
+            height: auto;
         }
 
         .video-frame {
-            border: 5px solid var(--background); /* Match the border color with the background */
-            border-radius: 100px; /* Rounded corners */
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
-            width: 100%; /* Full width of the container */
-            height: auto; /* Maintain aspect ratio */
+            border: 5px solid var(--background);
+            border-radius: 100px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            height: auto;
         }
 
-        /* Responsive design for smaller screens */
         @media (max-width: 768px) {
             .video-frame {
-                width: 100%; /* Full width on smaller screens */
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
-
- 
+    <!-- Loader -->
     <div class="loader-container">
         <div class="loader"></div>
     </div>
 
- 
+    <!-- Video Feed -->
     <div class="video-container">
-        <img src="{{ url_for('video_feed') }}" class="video-frame" onload="hideLoadingScreen()">
+        <img src="/video_feed" class="video-frame" onload="hideLoadingScreen()" alt="Video Feed">
     </div>
 
     <script>
-      
         function hideLoadingScreen() {
             console.log("Video Loaded: Hiding loading screen");
-            document.querySelector('.loader-container').style.display = 'none'; 
+            const loader = document.querySelector('.loader-container');
+            if (loader) {
+                loader.style.display = 'none';
+            }
         }
-       
 
-        
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
-        var confirmedStudents = new Set(); 
-        
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        const confirmedStudents = new Set();
+        const temporarySkippedStudents = new Set();
 
         function showConfirmationDialog(studentName) {
-            if (confirmedStudents.has(studentName)) {
+            if (confirmedStudents.has(studentName) || temporarySkippedStudents.has(studentName)) {
                 return;
             }
 
             const confirmed = confirm('Do you want to mark ' + studentName + ' as present?');
             if (confirmed) {
-                socket.emit('mark_as_present', {'name': studentName});
+                socket.emit('mark_as_present', { 'name': studentName });
+                confirmedStudents.add(studentName);
             } else {
-                socket.emit('mark_as_absent', {'name': studentName});
+                temporarySkippedStudents.add(studentName);
+                setTimeout(() => {
+                    temporarySkippedStudents.delete(studentName);
+                }, 10000); // 10 seconds
             }
-
-        
-            confirmedStudents.add(studentName);
         }
 
-        
         socket.on('recognized_student', function(data) {
             if (data && data.name) {
-                showConfirmationDialog(data.name);  
+                showConfirmationDialog(data.name);
             }
         });
     </script>
-
 </body>
 </html>
