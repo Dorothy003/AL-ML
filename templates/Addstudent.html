@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block head %}
+<title>Add Student</title>
 {% endblock %}
 
 {% block body %}
@@ -10,31 +11,61 @@
         <ul>
             <li><a href="{{ url_for('home') }}">Home</a></li>
             <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
-         
             <li><a href="{{ url_for('Attendancelog') }}">Attendance log</a></li>
         </ul>
     </nav>
 </div>
+
 <div class="e1">
-    <img src="{{ url_for('static', filename='assets/image/e1.png') }}">
+    <img src="{{ url_for('static', filename='assets/image/e1.png') }}" alt="Illustration 1">
 </div>
 <div class="e2">
-    <img src="{{ url_for('static', filename='assets/image/e2.png') }}">
+    <img src="{{ url_for('static', filename='assets/image/e2.png') }}" alt="Illustration 2">
 </div>
 
 <div class="r">
-    <img src="{{ url_for('static', filename='assets/image/addstud.png') }}" alt="Image">
+    <img src="{{ url_for('static', filename='assets/image/addstud.png') }}" alt="Add Student Image">
     <form action="{{ url_for('Addstudent') }}" method="post" enctype="multipart/form-data">
         <div class="container">
             <label for="studentid"><b>Student ID</b></label>
-            <input type="text" placeholder="Enter Student ID" name="studentid" id="studentid" required>
+            <input 
+                type="text" 
+                placeholder="Enter Student ID" 
+                name="studentid" 
+                id="studentid" 
+                required>
             <br><br>
+    
             <label for="studentname"><b>Student Name</b></label>
-            <input type="text" placeholder="Enter Student Name" name="studentname" id="studentname" required>
+            <input 
+                type="text" 
+                placeholder="Enter Student Name" 
+                name="studentname" 
+                id="studentname" 
+                required>
             <br><br>
+    
+            <label for="subject_code"><b>Subject</b></label>
+            <select name="subject_code" id="subject_code" required>
+                {% for semester in semesters %}
+                    <optgroup label="{{ semester.name }}">
+                        {% for subject in semester.subjects %}
+                            <option value="{{ subject.subject_code }}">{{ subject.subject_name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+            <br><br>
+    
             <label for="studentphoto"><b>Student Photo</b></label>
-            <input type="file" id="studentphoto" name="studentphoto">
+            <input 
+                type="file" 
+                id="studentphoto" 
+                name="studentphoto" 
+                accept="image/*"  <!-- Accept only image files -->
+                required>  <!-- Ensure file upload is mandatory -->
             <br><br>
+    
             <button type="submit" class="registerbtn">Add Student</button>
         </div>
     </form>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
-    <title>Video Feed with Full-Screen Loader</title>
+    <title>Video Feed with Subject Selection</title>
     <style>
         :root {
             --background: #2E2D57;
@@ -19,8 +19,11 @@
             margin: 0;
             background: var(--background);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            color: white;
         }
 
         .loader-container {
@@ -90,20 +93,60 @@
             z-index: 1;
             width: 50%;
             height: auto;
+            display: none;  /* Hide the video feed initially */
         }
 
         .video-frame {
             border: 5px solid var(--background);
-            border-radius: 100px;
+            border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             width: 100%;
             height: auto;
         }
 
-        @media (max-width: 768px) {
-            .video-frame {
-                width: 100%;
-            }
+        .confirmation-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            z-index: 1000;
+            color: black;
+        }
+
+        .confirmation-modal button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .confirm {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .cancel {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        label, select {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        select {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background-color: white;
+            color: black;
         }
     </style>
 </head>
@@ -113,19 +156,51 @@
         <div class="loader"></div>
     </div>
 
+    <!-- Subject Selection Dropdown -->
+    <label for="subject_code"><b>Select Subject</b></label>
+    <select name="subject_code" id="subject_code" required>
+        <option value="" disabled selected>Select a subject</option>
+        {% for semester in semesters %}
+            <optgroup label="{{ semester.name }}">
+                {% for subject in semester.subjects %}
+                    <option value="{{ subject.subject_code }}">{{ subject.subject_name }}</option>
+                {% endfor %}
+            </optgroup>
+        {% endfor %}
+    </select>
+    
+    <br><br>
+
     <!-- Video Feed -->
-    <div class="video-container">
+    <div class="video-container" id="videoFeed">
         <img src="/video_feed" class="video-frame" onload="hideLoadingScreen()" alt="Video Feed">
     </div>
 
     <script>
+        // Subject code to subject name mapping
+        const subjectNameMap = {};
+
+        // Populate subjectNameMap based on the subjects in the dropdown
+        const subjectDropdown = document.getElementById('subject_code');
+        Array.from(subjectDropdown.options).forEach(option => {
+            subjectNameMap[option.value] = option.text;
+        });
+
         function hideLoadingScreen() {
             console.log("Video Loaded: Hiding loading screen");
             const loader = document.querySelector('.loader-container');
             if (loader) {
-                loader.style.display = 'none';
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 300); // Smooth fade-out effect
             }
         }
+
+        // Fallback to hide the loader after 5 seconds if the video doesn't load
+        setTimeout(() => {
+            hideLoadingScreen();
+        }, 5000);
 
         const socket = io.connect('http://' + document.domain + ':' + location.port);
         const confirmedStudents = new Set();
@@ -135,22 +210,74 @@
             if (confirmedStudents.has(studentName) || temporarySkippedStudents.has(studentName)) {
                 return;
             }
+        
+            temporarySkippedStudents.add(studentName);
 
-            const confirmed = confirm('Do you want to mark ' + studentName + ' as present?');
-            if (confirmed) {
-                socket.emit('mark_as_present', { 'name': studentName });
+            // Ensure a subject is selected before proceeding
+            const selectedSubjectCode = document.getElementById('subject_code').value;
+            if (!selectedSubjectCode) {
+                alert('Please select a subject first!');
+                return;
+            }
+
+            const subjectName = subjectNameMap[selectedSubjectCode];  // Get subject name using the subject code
+            
+            console.log("Selected Subject Name: ", subjectName);  // Debugging: log the subject name
+        
+            // Create a modal
+            const modal = document.createElement('div');
+            modal.classList.add('confirmation-modal');
+            modal.innerHTML = `
+                <p>Do you want to mark <strong>${studentName}</strong> as present for the selected subject (${subjectName})?</p>
+                <button class="confirm">Yes</button>
+                <button class="cancel">No</button>
+            `;
+            document.body.appendChild(modal);
+        
+            modal.querySelector('.confirm').addEventListener('click', () => {
+                console.log("Emitting socket event with student name and subject name: ", studentName, subjectName);  // Debugging
+                socket.emit('mark_as_present', { 'name': studentName, 'subject_name': subjectName });
                 confirmedStudents.add(studentName);
-            } else {
-                temporarySkippedStudents.add(studentName);
+                modal.remove();
+            });
+        
+            modal.querySelector('.cancel').addEventListener('click', () => {
                 setTimeout(() => {
                     temporarySkippedStudents.delete(studentName);
                 }, 10000); // 10 seconds
-            }
+                modal.remove();
+            });
         }
 
         socket.on('recognized_student', function(data) {
+            console.log('Recognized student data: ', data);  // Debugging: log received data
             if (data && data.name) {
                 showConfirmationDialog(data.name);
+            } else {
+                console.error('Student name is missing in the received data:', data);
+            }
+        });
+
+        socket.on('connect_error', () => {
+            console.error('Failed to connect to the server. Please check the connection.');
+            alert('Connection error. Please refresh the page.');
+        });
+
+        socket.on('disconnect', () => {
+            console.warn('Disconnected from the server.');
+            alert('Disconnected from the server. Reconnecting...');
+            socket.connect();
+        });
+
+        // Show video feed when a subject is selected
+        subjectDropdown.addEventListener('change', () => {
+            const selectedSubjectCode = subjectDropdown.value;
+            const videoFeed = document.getElementById('videoFeed');
+            
+            if (selectedSubjectCode) {
+                // Show video feed after subject selection
+                videoFeed.style.display = 'flex';
+                hideLoadingScreen(); // Hide loader if video feed is shown
             }
         });
     </script>

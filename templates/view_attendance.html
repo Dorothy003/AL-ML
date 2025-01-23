@@ -42,7 +42,7 @@
             color: #555;
         }
 
-        input[type="date"] {
+        input[type="date"], select {
             padding: 8px 10px;
             font-size: 14px;
             border: 1px solid #ccc;
@@ -115,58 +115,59 @@
     <div class="container">
         <h1>View Attendance</h1>
         
-        <!-- Attendance Selection Form -->
         <form method="POST" action="{{ url_for('view_attendance') }}">
             <label for="selected_date">Select Date:</label>
-            <input type="date" name="selected_date" id="selected_date" 
-                   value="{{ selected_date }}"> <!-- Pre-fill the selected date -->
+            <input type="date" name="selected_date" id="selected_date" value="{{ selected_date }}">
+            
+            <label for="subject_code">Select Subject:</label>
+            <select name="subject_code" id="subject_code" required>
+                <option value="" disabled selected>Select a subject</option>
+                {% for subject in subjects %}
+                    <option value="{{ subject.subject_name }}" {% if subject.subject_name == selected_subject_name %}selected{% endif %}>{{ subject.subject_name }}</option>
+                {% endfor %}
+            </select>
+            
             <button type="submit">View Attendance</button>
         </form>
-
-        <!-- Attendance Details -->
-        {% if selected_date %}
-            <h2>Attendance for {{ selected_date }}</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student_id, student_data in students.items() %}
-                        <tr>
-                            <td>{{ student_data['name'] }}</td>
-                            <td>
-                               {% if selected_date in attendance_log %} 
-                                    {% if student_data['name'] in attendance_log[selected_date] %}
-                                       {{ attendance_log[selected_date][student_data['name']] }}
-                                    {% else %}
-                                        Absent
-                                    {% endif %}
-                               {% else %}
-                                    Absent
-                               {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% endif %}
-
-        <!-- Total Attendance Count -->
-        <h2>Total Attendance Count</h2>
-        <table>
+        
+        {% if selected_date and selected_subject_name %}
+        <h1>Attendance for {{ selected_subject_name }} on {{ selected_date }}</h1>
+        <table border="1">
             <thead>
                 <tr>
                     <th>Student Name</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student_name, status in date_attendance.items() %}
+                    <tr>
+                        <td>{{ student_name }}</td>
+                        <td>{{ status }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+
+
+        {% endif %}
+        
+        
+
+    
+        <h2>Total Attendance by Subject</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Name</th>
                     <th>Total Days Present</th>
                 </tr>
             </thead>
             <tbody>
-                {% for student_name, count in total_attendance_count.items() %}
+                {% for subject_name, count in total_subject_attendance.items() %}
                     <tr>
-                        <td>{{ student_name }}</td>
+                        <td>{{ subject_name }}</td>
                         <td>{{ count }}</td>
                     </tr>
                 {% endfor %}
