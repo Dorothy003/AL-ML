@@ -5,23 +5,6 @@
     <title>Attendance Log</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        function markAttendance(studentId, date, status) {
-            $.ajax({
-                url: "{{ url_for('mark_attendance_ajax') }}",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ student_id: studentId, date: date, status: status }),
-                success: function(response) {
-                    alert(response.message);
-                    location.reload();
-                },
-                error: function(xhr, status, error) {
-                    alert("An error occurred: " + error);
-                }
-            });
-        }
-    </script>
 </head>
 <body>
     <div class="header">
@@ -30,54 +13,66 @@
             <ul>
                 <li><a href="{{ url_for('home') }}">Home</a></li>
                 <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
-                
-                <li><a href="{{ url_for('Attendancelog') }}">Attendance log</a></li>
+                <li><a href="{{ url_for('Attendancelog') }}">Attendance Log</a></li>
             </ul>
         </nav>
     </div>
-    <div>
-        <a href="{{ url_for('view_attendance', date='latest') }}">
-            <button type="button">View Latest Attendance</button>
-        </a>
-    </div>
+
+    <form method="get" action="{{ url_for('Attendancelog') }}">
+        <label for="subject">Filter by Subject:</label>
+        <select id="subject" name="subject_name">
+            <option value="">-- All Subjects --</option>
+            {% for subject in subjects %}
+                <option value="{{ subject['subject_name'] }}" {% if subject['subject_name'] == request.args.get('subject_name') %}selected{% endif %}>
+                    {{ subject['subject_name'] }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Submit</button>
+    </form>
+
     <div class="outer-wrapper">
         <div class="inner-wrapper">
             <table>
-            <thead>
-                <tr>
-                    <th>Roll No</th>
-                    <th>Student Name</th>
-                    <th>attendance</th>
-                    {% for date in dates %}
-                        <th>{{ date }}</th>
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Name</th>
+                        {% for date in dates %}
+                            <th>{{ date }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject, students in students_by_subject.items() %}
+                        <tr>
+                            <td colspan="100%" style="background-color: #f0f0f0; text-align: center;">
+                                <strong>{{ subject }}</strong>
+                            </td>
+                        </tr>
+                        {% for student in students %}
+                            <tr>
+                                <td>{{ student['student_id'] }}</td>
+                                <td>{{ student['name'] }}</td>
+                                {% for date in dates %}
+                                    <td>
+                                        {% if attendance_log.get(date) and attendance_log[date].get(student['student_id']) %}
+                                            {% if attendance_log[date][student['student_id']].get(subject) %}
+                                                {{ attendance_log[date][student['student_id']][subject] }}
+                                            {% else %}
+                                                Absent
+                                            {% endif %}
+                                        {% else %}
+                                            Absent
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
                     {% endfor %}
-                   
-                </tr>
-            </thead>
-            <tbody>
-    {% for student_id, student_data in students.items() %}
-        <tr>
-            <td>{{ student_data['name'] }}</td>
-            <td>{{ student_id }}</td>
-           
-            {% for date in dates %}
-                <td>{{ attendance_log.get(date, {}).get(student_data['name'], 'Absent') }}</td>
-            {% endfor %}
-        </tr>
-    {% endfor %}
-</tbody>
-
-            </tbody>
-        </table>
-    </div>
-    <div class="e1">
-        <img src="{{ url_for('static', filename='assets/image/e1.png') }}">
-    </div>
-    <div class="e2">
-        <img src="{{ url_for('static', filename='assets/image/e2.png') }}">
-    </div>
-    <div class="egroup">
-        <img src="static/assets/image/twin spheres.png">
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>
