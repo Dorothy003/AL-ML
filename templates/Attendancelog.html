@@ -5,23 +5,76 @@
     <title>Attendance Log</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        function markAttendance(studentId, date, status) {
-            $.ajax({
-                url: "{{ url_for('mark_attendance_ajax') }}",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ student_id: studentId, date: date, status: status }),
-                success: function(response) {
-                    alert(response.message);
-                    location.reload();
-                },
-                error: function(xhr, status, error) {
-                    alert("An error occurred: " + error);
-                }
-            });
-        }
-    </script>
+    <style>
+        /* Style the form container */
+       
+        form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 300px;
+    margin: 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+button {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+/* Style for the button container */
+.button-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Style for the "View Attendance" button */
+#view-attendance {
+    padding: 10px 15px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#view-attendance:hover {
+    background-color: #0056b3;
+}
+
+
+
+    </style>
 </head>
 <body>
     <div class="header">
@@ -31,14 +84,25 @@
                 <li><a href="{{ url_for('home') }}">Home</a></li>
                 <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
                 <li><a href="{{ url_for('Attendancelog') }}">Attendance Log</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
             </ul>
         </nav>
     </div>
-    <div>
-        <a href="{{ url_for('view_attendance', date='latest') }}">
-            <button type="button">View Latest Attendance</button>
-        </a>
-    </div>
+
+    <form method="get" action="{{ url_for('Attendancelog') }}">
+        <label for="subject">Filter by Subject:</label>
+        <select id="subject" name="subject_name">
+            <option value="">-- All Subjects --</option>
+            {% for subject in subjects %}
+                <option value="{{ subject['subject_name'] }}" {% if subject['subject_name'] == request.args.get('subject_name') %}selected{% endif %}>
+                    {{ subject['subject_name'] }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Submit</button>
+    </form>
+
     <div class="outer-wrapper">
         <div class="inner-wrapper">
             <table>
@@ -52,25 +116,38 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for student_id, student_data in students.items() %}
+                    {% for subject, students in students_by_subject.items() %}
                         <tr>
-                            <td>{{ student_id }}</td>
-                            <td>{{ student_data['name'] }}</td>
-                            {% for date in dates %}
-                                <td>
-                                    {% if attendance_log.get(date) and attendance_log[date].get(student_id) %}
-                                        {{ attendance_log[date][student_id] }}
-                                    {% else %}
-                                        Absent
-                                    {% endif %}
-                                </td>
-                            {% endfor %}
+                            <td colspan="100%" style="background-color: #f0f0f0; text-align: center;">
+                                <strong>{{ subject }}</strong>
+                            </td>
                         </tr>
+                        {% for student in students %}
+                            <tr>
+                                <td>{{ student['student_id'] }}</td>
+                                <td>{{ student['name'] }}</td>
+                                {% for date in dates %}
+                                    <td>
+                                        {% if attendance_log.get(date) and attendance_log[date].get(student['student_id']) %}
+                                            {% if attendance_log[date][student['student_id']].get(subject) %}
+                                                {{ attendance_log[date][student['student_id']][subject] }}
+                                            {% else %}
+                                                Absent
+                                            {% endif %}
+                                        {% else %}
+                                            Absent
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+    <div class = "button-container">
+        <button id="view-attendance">View Attendance</button>
+    </div>
 </body>
 </html>
-
