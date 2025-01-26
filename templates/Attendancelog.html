@@ -9,61 +9,70 @@
         /* Style the form container */
        
         form {
-            margin: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            max-width: 400px;
-            font-family: Arial, sans-serif;
-        }
-
-        /* Style the label */
-        label {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        /* Style the select dropdown */
-        select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background-color: #fff;
-            box-sizing: border-box;
-        }
-
-        /* Style the button */
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 15px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* Change button color on hover */
-        button:hover {
-            background-color: #45a049;
-        }
-
-        /* Style for the outer wrapper */
-        .outer-wrapper {
-            margin-top: 20px;
-        }
-/* Change button color on hover */
-button:hover {
-    background-color: #45a049;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 300px;
+    margin: 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
 }
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+button {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+/* Style for the button container */
+.button-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Style for the "View Attendance" button */
+#view-attendance {
+    padding: 10px 15px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#view-attendance:hover {
+    background-color: #0056b3;
+}
+
+
 
     </style>
 </head>
@@ -136,6 +145,9 @@ button:hover {
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class = "button-container">
+        <button id="view-attendance">View Attendance</button>
     </div>
 </body>
 </html>
