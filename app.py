@@ -290,10 +290,10 @@ def Addstudent():
     if 'user' not in session:
         flash('Please log in to add students.', 'error')
         return redirect(url_for('login'))
-
+    
     user_email = session['user']
     user = mongo.db.users.find_one({'email': user_email})
-
+    homepage_id = user.get('homepage_id')
     if request.method == 'POST':
         try:
             student_id = request.form['studentid']
@@ -335,7 +335,8 @@ def Addstudent():
                 "image": filename,
                 "name": student_name,
                 "subject_code": subject_code,
-                "subject_name": subject_name
+                "subject_name": subject_name,
+                "user_id": homepage_id
             }
 
             # Ensure no auto-generated `_id` field by using `replace_one`
@@ -470,7 +471,11 @@ def Attendancelog():
                 subjects.append(subject)  # Collect subjects
                 
                 # Fetch students enrolled in this subject from the students collection
-                students = students_collection.find({'subject_name': subject['subject_name']})
+               # students = students_collection.find({'subject_name': subject['subject_name']})
+                students = students_collection.find({
+                    'subject_name': subject['subject_name'],
+                    'user_id': homepage_id
+                })
                 students_by_subject[subject['subject_name']] = [
                     {
                         'student_id': student.get('id'),
@@ -486,7 +491,7 @@ def Attendancelog():
         # Filter the students and attendance for the selected subject
         students_by_subject = {subject: students for subject, students in students_by_subject.items() if subject == subject_filter}
 
-    # Fetch attendance records from the `attendance` collection
+    # Fetch attendance records from the attendance collection
     attendance_records = list(db.attendance.find({}))
     
     # Initialize the attendance log to store attendance by student_id for each date
@@ -531,7 +536,7 @@ def Attendancelog():
         dates=dates,
         subjects=subjects,
         students_by_subject=students_by_subject
-    )
+    ) 
 
 
 @app.route('/mark_attendance_ajax', methods=['POST'])
@@ -629,9 +634,11 @@ def delete_subject():
         flash('Semester not found.', 'error')
 
     return redirect(url_for('dashboard'))
+
 @app.route('/view_attendance', methods=['GET', 'POST'])
 def view_attendance():
     # Fetch all students and attendance records from MongoDB
+    #homepage_id = session.get('homepage_id')
     students_records = list(db.students.find({}))
     attendance_records = list(db.attendance.find({}))
     
@@ -674,36 +681,38 @@ def view_attendance():
     selected_subject_name = request.form.get('subject_code') if request.method == 'POST' else None
     
     # Initialize date_attendance to hold attendance data for the selected date and subject
-    date_attendance = {}
+    date_attendance = {student_data['name']: "Absent"
+        for student_id, student_data in students.items()
+        if selected_subject_name in student_data['subjects']}
 
-    # If both date and subject are selected, fetch the attendance for that subject
+    # Fetch attendance for the selected date and subject
     if selected_date and selected_subject_name:
-        # Fetch attendance for the selected date and subject
         if selected_subject_name in attendance_log.get(selected_date, {}):
-            date_attendance = attendance_log[selected_date][selected_subject_name]
-        
-        # Ensure every student is shown in the selected subject with a default "Absent" if no record is found
-        for student_id, student_data in students.items():
-            # Only students who are enrolled in the selected subject should have their attendance displayed
-            if selected_subject_name in student_data['subjects']:
-                # If the student is enrolled in the selected subject, we check their attendance
-                if student_data['name'] not in date_attendance:
-                    date_attendance[student_data['name']] = "Absent"  # Mark them as "Absent" if no attendance found
-
-    # Calculate total attendance by subject (across all dates)
-    total_subject_attendance = {subject['subject_name']: 0 for subject in subjects}
-
-    # Loop through attendance records and calculate total attendance
+            # Update attendance with "Present" or any existing statuses from the log
+            for student_name, status in attendance_log[selected_date][selected_subject_name].items():
+                date_attendance[student_name] = status
+    
+    # Calculate total attendance for each subject
+    total_subject_attendance = {}
     for record in attendance_records:
+        student_name = record.get('student_name')
         subject_name = record.get('subject_name')
         status = record.get('status', "Absent")
         
-        # Check if the subject is already in the dictionary, if not, initialize it
-        if subject_name not in total_subject_attendance:
-            total_subject_attendance[subject_name] = 0
+        if not student_name or not subject_name:
+            continue
         
+        # Initialize the subject in the dictionary if not already present
+        if subject_name not in total_subject_attendance:
+            total_subject_attendance[subject_name] = {}
+
+        # Initialize the student in the subject-specific dictionary if not already present
+        if student_name not in total_subject_attendance[subject_name]:
+            total_subject_attendance[subject_name][student_name] = 0
+        
+        # Increment count if status is "Present"
         if status == "Present":
-            total_subject_attendance[subject_name] += 1
+            total_subject_attendance[subject_name][student_name] += 1
 
     # Return the correct context for the template
     return render_template(
@@ -715,6 +724,8 @@ def view_attendance():
         subjects=subjects,  # List of subjects for dropdown
         date_attendance=date_attendance  # Attendance data for the selected subject and date
     )
+
+
 
 def clean_attendance_log():
     # Fetch all attendance records from MongoDB

@@ -141,9 +141,18 @@
             </thead>
             <tbody>
                 {% for student_name, status in date_attendance.items() %}
+                
                     <tr>
                         <td>{{ student_name }}</td>
-                        <td>{{ status }}</td>
+                        <td>{% if status == 'Present'%}
+                            Present
+                            
+                              {%  else%}
+                            Absent
+                               {% endif %}
+                           
+                            
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -153,26 +162,29 @@
 
         {% endif %}
         
-        
+        {% if selected_subject_name %}
+<h2>Total Attendance for {{ selected_subject_name }}</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Student Name</th>
+            <th>Total Days Present</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for student_name, count in total_subject_attendance[selected_subject_name].items() %}
+            <tr>
+                <td>{{ student_name }}</td>
+                <td>{{ count }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
 
     
-        <h2>Total Attendance by Subject</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Subject Name</th>
-                    <th>Total Days Present</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for subject_name, count in total_subject_attendance.items() %}
-                    <tr>
-                        <td>{{ subject_name }}</td>
-                        <td>{{ count }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        
     </div>
 </body>
 </html>
