@@ -5,6 +5,76 @@
     <title>Attendance Log</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Style the form container */
+       
+        form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 300px;
+    margin: 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+button {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+/* Style for the button container */
+.button-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Style for the "View Attendance" button */
+#view-attendance {
+    padding: 10px 15px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#view-attendance:hover {
+    background-color: #0056b3;
+}
+
+
+
+    </style>
 </head>
 <body>
     <div class="header">
@@ -14,6 +84,8 @@
                 <li><a href="{{ url_for('home') }}">Home</a></li>
                 <li><a href="{{ url_for('Addstudent') }}">Add Students</a></li>
                 <li><a href="{{ url_for('Attendancelog') }}">Attendance Log</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
             </ul>
         </nav>
     </div>
@@ -73,6 +145,9 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class = "button-container">
+        <button id="view-attendance">View Attendance</button>
     </div>
 </body>
 </html>
