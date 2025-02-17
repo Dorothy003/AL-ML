@@ -165,8 +165,8 @@ height:500px;
 .container {
   position:relative;
   top:40%;
-  left:670px;
-  top:50%;
+  left:570px;
+  top:20%;
   display: inline-block;
 }
 
@@ -232,7 +232,7 @@ input[type="file"] {
   display: flex;
 }
 .r form-container{
-  gap:2px;
+  gap: 2px;
 }
 
 
